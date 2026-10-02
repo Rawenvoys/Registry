@@ -5,8 +5,6 @@ using Registry.Contracts.Accounts;
 
 namespace Registry.IntegrationTests.Accounts;
 
-internal sealed record TokenResponse(string AccessToken, string RefreshToken);
-
 internal static class AccountApi
 {
     public const string Password = "Correct-horse-1";
