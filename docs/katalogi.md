@@ -20,7 +20,7 @@ Relacje typu Label, Artyści, EP to po prostu pola typu **odwołanie** między k
 
 ```
 Catalog
-  Id, GroupId, Name, Description?, TracksStock (bool), CreatedAt
+  Id, GroupId, Name, Description?, TracksStock (bool), Visibility (Private | Public), CreatedAt
 
 FieldDefinition
   Id, CatalogId, Key, Label, Type, IsRequired, Order, IsArchived
@@ -43,6 +43,11 @@ Każdy wpis ma zawsze `Name`, żeby listy, wyszukiwanie i odwołania działały 
 - Pola z danymi nie są usuwane, tylko archiwizowane. Zmiana typu tylko między zgodnymi typami (np. Integer na Decimal); inaczej nowe pole.
 - Ilości są per lokalizacja (`Stock`), więc ten sam katalog działa w domu z jedną lokalizacją i w firmie z kilkoma.
 - Katalog z `TracksStock = false` to czysty katalog informacji (np. Artyści) bez ilości.
+
+## Widoczność
+
+Na start wszystkie katalogi są prywatne (`Visibility = Private`), widoczne tylko dla członków grupy.
+Docelowo katalog może być publiczny, wspólny dla wielu użytkowników jak na Discogs. Pole jest w modelu od początku, żeby później nie migrować danych; reguły publicznych katalogów (kto edytuje, moderacja, jak prywatna kolekcja odwołuje się do publicznego wpisu) zaprojektujemy, gdy do tego dojdziemy.
 
 ## Szablony
 
