@@ -1,15 +1,8 @@
 # Konta, logowanie i grupy
 
-Stan: propozycja, wersja 2 (2026-10-02). Uwzględnia: logowanie Google/Facebook/Microsoft z parowaniem kont, brak domyślnej grupy, kreator na start, rdzeń niezależny od win.
+Stan: propozycja, wersja 3 (2026-10-02). Uwzględnia: logowanie Google/Facebook/Microsoft z parowaniem kont, brak domyślnej grupy, kreator na start. Model katalogów opisuje [katalogi.md](katalogi.md).
 
-## 1. Podział na rdzeń i moduły
-
-Wspólny **rdzeń** (konta, logowanie, grupy, członkostwa, lokalizacje) nie wie nic o winach.
-Wino to pierwszy **moduł dziedzinowy**. Katalog Hardstyle (labele, artyści, wydania/EP) to inny moduł z zupełnie innym modelem, ale z tym samym rdzeniem kont i grup.
-
-Na start wszystko w jednym rozwiązaniu, moduły jako foldery w Domain/Application. Wydzielenie rdzenia do osobnej paczki NuGet dopiero, gdy faktycznie powstanie drugi projekt.
-
-## 2. Konto i logowanie
+## 1. Konto i logowanie
 
 ```
 User (ASP.NET Core Identity)
@@ -46,7 +39,7 @@ W ustawieniach konta: lista powiązanych logowań, możliwość odłączenia (o 
 - Dzięki temu web i aplikacja mobilna korzystają z jednego API, bez przekierowań i ciasteczek po stronie API.
 - Apple warto dodać razem z aplikacją na iOS.
 
-## 3. Grupy
+## 2. Grupy
 
 Brak domyślnej grupy. Po pierwszym logowaniu, jeśli użytkownik nie należy do żadnej grupy, widzi **kreator**:
 
@@ -74,12 +67,12 @@ Invitation
 Role: `Owner` (wszystko, w tym usunięcie grupy i przekazanie własności), `Admin` (członkowie, lokalizacje), `Member` (praca na danych modułu).
 Dla grup Prywatna i Dom tworzymy jedną domyślną lokalizację, ukrytą w UI.
 
-## 4. Furtka na firmy z oddziałami
+## 3. Furtka na firmy z oddziałami
 
-- Dane modułów (np. zapasy wina) zawsze wiszą na `Location`, nie na `Group`. Dom ma jedną lokalizację, sieć sklepów ma ich kilka, model ten sam.
-- Ograniczenie pracownika do wybranych sklepów dodamy później jako `LocationAccess(UserId, LocationId, Role)`, bez zmian w istniejących tabelach.
+- Stany ilościowe wpisów zawsze wiszą na `Location`, nie na `Group`. Dom ma jedną lokalizację, sieć sklepów ma ich kilka, model ten sam.
+- Ograniczenie pracownika do wybranych lokalizacji dodamy później jako `LocationAccess(UserId, LocationId, Role)`, bez zmian w istniejących tabelach.
 
-## 5. Decyzje techniczne
+## 4. Decyzje techniczne
 
 - .NET 10, ASP.NET Core minimal API, EF Core, PostgreSQL.
 - ASP.NET Core Identity dla kont, haseł, potwierdzeń e-mail i blokad.

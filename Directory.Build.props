@@ -1,8 +1,14 @@
 <Project>
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Registry.$(MSBuildProjectName)</RootNamespace>
+    <AssemblyName>Registry.$(MSBuildProjectName)</AssemblyName>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!-- MobileApp sets its own platform-specific TargetFrameworks. -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' != 'MobileApp'">
+    <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
 </Project>
