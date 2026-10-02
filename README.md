@@ -8,11 +8,12 @@ Generyczna platforma do prowadzenia rejestrów. Użytkownik sam definiuje katalo
 - `src/Application` - przypadki użycia
 - `src/Infrastructure` - EF Core, Identity, integracje
 - `src/Contracts` - DTO współdzielone przez API i klientów
+- `src/Client` - typowany klient API (Refit) używany przez UI w web i mobile
 - `src/Api` - ASP.NET Core API
 - `src/UI` - wspólne komponenty Blazor (Razor Class Library) dla web i mobile
 - `src/WebApp` - Blazor WebAssembly, host dla `UI`
 - `src/MobileApp` - .NET MAUI Blazor Hybrid, host dla `UI`
-- `tests/UnitTests`
+- `tests/UnitTests`, `tests/IntegrationTests`
 - `docs/` - decyzje projektowe
 
 Przestrzenie nazw i nazwy assembly dostają prefiks `Registry.` z `Directory.Build.props`.

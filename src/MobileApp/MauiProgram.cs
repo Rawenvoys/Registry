@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
+using Registry.Client;
 
 namespace Registry.MobileApp;
 
@@ -15,6 +16,7 @@ public static class MauiProgram
 			});
 
 		builder.Services.AddMauiBlazorWebView();
+		builder.Services.AddRegistryClient(ApiBaseAddress);
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();
@@ -23,4 +25,9 @@ public static class MauiProgram
 
 		return builder.Build();
 	}
+
+	// The Android emulator reaches the host machine's localhost through 10.0.2.2.
+	private static Uri ApiBaseAddress => DeviceInfo.Platform == DevicePlatform.Android
+		? new Uri("https://10.0.2.2:7276/")
+		: new Uri("https://localhost:7276/");
 }
