@@ -16,6 +16,7 @@ jobs:
       - run: dotnet build src/Api --configuration Release
       - run: dotnet build src/WebApp --configuration Release
       - run: dotnet test tests/UnitTests --configuration Release
+      - run: dotnet test tests/IntegrationTests --configuration Release
 
   mobile:
     runs-on: ubuntu-latest

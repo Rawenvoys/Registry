@@ -1,6 +1,6 @@
 # Konta, logowanie i grupy
 
-Stan: propozycja, wersja 3 (2026-10-02). Uwzględnia: logowanie Google/Facebook/Microsoft z parowaniem kont, brak domyślnej grupy, kreator na start. Model katalogów opisuje [katalogi.md](katalogi.md).
+Stan: wersja 3, logowanie zaimplementowane (2026-10-02). Uwzględnia: logowanie Google/Facebook/Microsoft z parowaniem kont, brak domyślnej grupy, kreator na start. Model katalogów opisuje [katalogi.md](katalogi.md).
 
 ## 1. Konto i logowanie
 
@@ -20,14 +20,16 @@ Jedno konto = jedna osoba. Konto może mieć hasło, jedno lub kilka powiązanyc
 | Sytuacja | Co robimy |
 |---|---|
 | Para (Provider, ProviderKey) już istnieje | Logujemy na powiązane konto |
-| Brak konta z tym e-mailem | Tworzymy konto bez hasła, e-mail potwierdzony, dodajemy UserLogin |
+| Brak konta z tym e-mailem, dostawca potwierdza e-mail | Tworzymy konto bez hasła, e-mail potwierdzony, dodajemy UserLogin |
 | Jest konto z tym e-mailem, dostawca potwierdza e-mail (`email_verified`), konto lokalne ma potwierdzony e-mail | **Parujemy automatycznie** i logujemy |
 | Jest konto z tym e-mailem, ale lokalnie e-mail **niepotwierdzony** | Parujemy, ale usuwamy hasło i unieważniamy sesje tego konta (patrz niżej) |
-| Dostawca nie potwierdza e-maila albo go nie zwraca (zdarza się w Facebooku) | Nie parujemy automatycznie; prosimy o e-mail i potwierdzenie linkiem |
+| Jest konto z tym e-mailem, ale dostawca nie potwierdza e-maila | Nie parujemy (409 `email_not_verified`); użytkownik loguje się hasłem |
+| Brak konta, dostawca nie potwierdza e-maila | Tworzymy konto z niepotwierdzonym e-mailem; logowanie po potwierdzeniu linkiem (`/auth/resendConfirmationEmail`) |
+| Dostawca nie zwraca e-maila (zdarza się w Facebooku) | Odrzucamy (400 `email_required`); podanie e-maila ręcznie dojdzie później |
 
 **Dlaczego usuwamy hasło przy niepotwierdzonym koncie:** ktoś mógłby wcześniej założyć konto na cudzy e-mail z własnym hasłem i czekać. Gdy właściciel e-maila zaloguje się przez Google, bez tego kroku napastnik nadal miałby dostęp hasłem do sparowanego konta.
 
-**Microsoft:** dla kont firmowych (Entra ID) claim `email` nie jest weryfikowany przez Microsoft. Automatycznie parujemy tylko konta osobiste Microsoft albo gdy token zawiera potwierdzenie domeny (`xms_edov`); w pozostałych przypadkach jak wiersz ostatni w tabeli.
+**Microsoft:** dla kont firmowych (Entra ID) claim `email` nie jest weryfikowany przez Microsoft. Automatycznie parujemy tylko konta osobiste Microsoft albo gdy token zawiera potwierdzenie domeny (`xms_edov`); w pozostałych przypadkach e-mail traktujemy jako niepotwierdzony.
 
 W ustawieniach konta: lista powiązanych logowań, możliwość odłączenia (o ile zostaje hasło albo inne logowanie) i ustawienia hasła dla konta społecznościowego.
 
@@ -74,6 +76,7 @@ Dla grup Prywatna i Dom tworzymy jedną domyślną lokalizację, ukrytą w UI.
 
 ## 4. Decyzje techniczne
 
-- .NET 10, ASP.NET Core minimal API, EF Core, PostgreSQL.
+- .NET 10, ASP.NET Core minimal API, EF Core, SQLite.
+- Na Kubernetesie: jedna replika API z plikiem bazy na wolumenie trwałym (SQLite nie obsługuje zapisu z wielu podów). Migracje uruchamiają się przy starcie API.
 - ASP.NET Core Identity dla kont, haseł, potwierdzeń e-mail i blokad.
 - Warstwy: Domain, Application, Infrastructure, Api. Bez MediatR i bez repozytoriów nad EF Core dla prostych operacji.

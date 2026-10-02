@@ -27,7 +27,7 @@ FieldDefinition
   Options (dla Choice/MultiChoice), TargetCatalogId (dla Reference)
 
 Item
-  Id, CatalogId, Name, Values (jsonb: { fieldId: wartość }), CreatedBy, CreatedAt, UpdatedAt
+  Id, CatalogId, Name, Values (JSON: { fieldId: wartość }), CreatedBy, CreatedAt, UpdatedAt
 
 Stock                          (tylko gdy Catalog.TracksStock)
   ItemId, LocationId, Quantity
@@ -55,5 +55,5 @@ Gotowe zestawy katalogów do wyboru w kreatorze grupy, np. "Piwniczka z winem" a
 
 ## Technicznie
 
-- PostgreSQL `jsonb` na `Item.Values` z indeksem GIN; filtrowanie i sortowanie po polach przez zapytania JSON w EF Core.
+- SQLite: `Item.Values` jako kolumna JSON; filtrowanie i sortowanie po polach przez funkcje JSON SQLite w zapytaniach EF Core.
 - Formularze i listy w Blazor budowane dynamicznie z definicji pól (jeden komponent edytora na typ pola) w projekcie `UI`, więc web i mobile mają je za darmo.
