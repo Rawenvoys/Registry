@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Registry.Application.Accounts;
+using Registry.Application.Common;
 using Registry.Infrastructure.Identity;
 using Registry.Infrastructure.Identity.External;
 using Registry.Infrastructure.Persistence;
@@ -15,6 +16,8 @@ public static class DependencyInjection
     {
         services.AddDbContext<AppDbContext>(options =>
             options.UseSqlite(configuration.GetConnectionString("Registry")));
+        services.AddScoped<IRegistryDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddScoped<IUserDirectory, UserDirectory>();
 
         services
             .AddIdentityApiEndpoints<User>(options =>
