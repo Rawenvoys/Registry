@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="utf-8" />
+    <title>Logowanie…</title>
+</head>
+<body>
+    <p>Logowanie…</p>
+    <script>
+        // Hands the provider's answer (#id_token=…&state=… or #error=…) back to the app tab, see js/external-login.js.
+        const result = location.hash.length > 1 ? location.hash.substring(1) : location.search.substring(1);
+        const channel = new BroadcastChannel('registry-signin');
+        channel.postMessage(result);
+        channel.close();
+        window.close();
+    </script>
+</body>
+</html>

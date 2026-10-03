@@ -8,7 +8,10 @@ namespace Registry.Client;
 
 public static class DependencyInjection
 {
-    /// <summary>Registers typed Refit clients for the Registry API at <paramref name="apiBaseAddress"/>.</summary>
+    /// <summary>
+    /// Registers typed Refit clients for the Registry API at <paramref name="apiBaseAddress"/>.
+    /// Source-generated, because Blazor WebAssembly and iOS cannot emit Refit's reflection-based clients.
+    /// </summary>
     public static IServiceCollection AddRegistryClient(this IServiceCollection services, Uri apiBaseAddress)
     {
         services.TryAddSingleton<IAccessTokenStore, InMemoryAccessTokenStore>();
@@ -19,9 +22,9 @@ public static class DependencyInjection
                 await sp.GetRequiredService<IAccessTokenStore>().GetAccessTokenAsync(cancellationToken) ?? string.Empty,
         };
 
-        services.AddRefitClient<IAuthApi>(Settings).ConfigureHttpClient(c => c.BaseAddress = apiBaseAddress);
-        services.AddRefitClient<IAccountApi>(Settings).ConfigureHttpClient(c => c.BaseAddress = apiBaseAddress);
-        services.AddRefitClient<IGroupsApi>(Settings).ConfigureHttpClient(c => c.BaseAddress = apiBaseAddress);
+        services.AddRefitGeneratedClient<IAuthApi>(Settings).ConfigureHttpClient(c => c.BaseAddress = apiBaseAddress);
+        services.AddRefitGeneratedClient<IAccountApi>(Settings).ConfigureHttpClient(c => c.BaseAddress = apiBaseAddress);
+        services.AddRefitGeneratedClient<IGroupsApi>(Settings).ConfigureHttpClient(c => c.BaseAddress = apiBaseAddress);
 
         return services;
     }

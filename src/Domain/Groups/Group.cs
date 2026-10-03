@@ -16,8 +16,6 @@ public class Group
 
     public string Name { get; private set; } = null!;
 
-    public GroupKind Kind { get; private set; }
-
     public DateTimeOffset CreatedAt { get; private set; }
 
     public IReadOnlyCollection<Membership> Memberships => _memberships;
@@ -27,31 +25,20 @@ public class Group
     public IReadOnlyCollection<Invitation> Invitations => _invitations;
 
     /// <summary>
-    /// Creates a group owned by <paramref name="ownerId"/>. A business needs its first location up front;
-    /// personal and household groups get a default location named after the group.
+    /// Creates a group owned by <paramref name="ownerId"/> with one default location named after the group.
+    /// Clients show locations only once a group has more than one.
     /// </summary>
-    public static Group Create(string name, GroupKind kind, Guid ownerId, string? firstLocationName, string? firstLocationAddress, DateTimeOffset now)
+    public static Group Create(string name, Guid ownerId, DateTimeOffset now)
     {
         var group = new Group
         {
             Id = Guid.NewGuid(),
             Name = RequireName(name, "group_name_required", "Podaj nazwę grupy."),
-            Kind = kind,
             CreatedAt = now,
         };
 
         group._memberships.Add(new Membership(group.Id, ownerId, GroupRole.Owner, now));
-
-        if (kind == GroupKind.Business)
-        {
-            var locationName = RequireName(firstLocationName, "location_name_required", "Firma potrzebuje pierwszej lokalizacji.");
-            group._locations.Add(new Location(group.Id, locationName, Trim(firstLocationAddress), isDefault: true));
-        }
-        else
-        {
-            group._locations.Add(new Location(group.Id, group.Name, address: null, isDefault: true));
-        }
-
+        group._locations.Add(new Location(group.Id, group.Name, address: null, isDefault: true));
         return group;
     }
 
@@ -60,11 +47,6 @@ public class Group
     public Location AddLocation(Guid actorId, string name, string? address)
     {
         RequireManager(actorId);
-        if (Kind != GroupKind.Business)
-        {
-            throw new DomainException("locations_business_only", "Kolejne lokalizacje może mieć tylko firma.");
-        }
-
         var location = new Location(Id, RequireName(name, "location_name_required", "Podaj nazwę lokalizacji."), Trim(address), isDefault: false);
         _locations.Add(location);
         return location;

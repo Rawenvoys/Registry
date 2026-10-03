@@ -98,6 +98,6 @@ public static class AccountEndpoints
             user.Email,
             user.DisplayName,
             await userManager.HasPasswordAsync(user),
-            logins.Select(l => l.LoginProvider).ToArray()));
+			[.. logins.Select(l => l.LoginProvider)]));
     }
 }

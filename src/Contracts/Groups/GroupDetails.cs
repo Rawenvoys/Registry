@@ -3,7 +3,6 @@ namespace Registry.Contracts.Groups;
 public sealed record GroupDetails(
     Guid Id,
     string Name,
-    GroupKind Kind,
     GroupRole MyRole,
     IReadOnlyList<MemberResponse> Members,
     IReadOnlyList<LocationResponse> Locations);

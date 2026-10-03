@@ -1,0 +1,151 @@
+@page "/login"
+@layout AuthLayout
+@inject IAuthApi AuthApi
+@inject AuthSession Session
+@inject NavigationManager Navigation
+
+<PageTitle>Logowanie · Registry</PageTitle>
+
+<h1 class="h4 mb-4">Zaloguj się</h1>
+
+<ExternalSignInButtons OnSignedIn="Continue" OnFailed="ShowExternalProblem" />
+
+<EditForm Model="_model" OnValidSubmit="SignInAsync" FormName="login">
+    <DataAnnotationsValidator />
+
+    <div class="mb-3">
+        <label for="email" class="form-label">E-mail</label>
+        <InputText id="email" type="email" class="form-control" autocomplete="username" @bind-Value="_model.Email" />
+        <ValidationMessage For="() => _model.Email" />
+    </div>
+
+    <div class="mb-3">
+        <label for="password" class="form-label">Hasło</label>
+        <InputText id="password" type="password" class="form-control" autocomplete="current-password" @bind-Value="_model.Password" />
+        <ValidationMessage For="() => _model.Password" />
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="alert alert-danger" role="alert">
+            @_error
+            @if (_canResend)
+            {
+                <div class="mt-2">
+                    <button type="button" class="btn btn-sm btn-outline-danger" disabled="@_busy" @onclick="ResendAsync">Wyślij link ponownie</button>
+                </div>
+            }
+        </div>
+    }
+
+    @if (_info is not null)
+    {
+        <div class="alert alert-success" role="status">@_info</div>
+    }
+
+    <div class="d-grid">
+        <button type="submit" class="btn btn-primary" disabled="@_busy">@(_busy ? "Logowanie…" : "Zaloguj")</button>
+    </div>
+</EditForm>
+
+<p class="mt-4 mb-0 text-center">
+    Nie masz konta? <a href="register">Załóż konto</a>
+</p>
+
+@code {
+    private const string NoConnection = "Brak połączenia z serwerem. Spróbuj ponownie.";
+
+    private readonly LoginModel _model = new();
+    private bool _busy;
+    private bool _canResend;
+    private string? _error;
+    private string? _info;
+
+    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+    private async Task SignInAsync()
+    {
+        _busy = true;
+        _error = _info = null;
+        _canResend = false;
+        try
+        {
+            var response = await AuthApi.LoginAsync(new PasswordCredentials(_model.Email, _model.Password));
+            if (response is { IsSuccessful: true, Content: { } tokens })
+            {
+                await Session.SignInAsync(tokens);
+                Continue();
+                return;
+            }
+
+            // Identity answers 401 with the sign-in result in "detail".
+            var problem = ApiProblem.From(response.Error);
+            switch (problem.Detail)
+            {
+                case "NotAllowed":
+                    _error = "Najpierw potwierdź adres e-mail linkiem z wiadomości, którą wysłaliśmy.";
+                    _canResend = true;
+                    break;
+                case "LockedOut":
+                case "Lockedout":
+                    _error = "Za dużo nieudanych prób. Spróbuj ponownie za kilka minut.";
+                    break;
+                default:
+                    _error = problem.IsNetworkError ? NoConnection : "Nieprawidłowy e-mail lub hasło.";
+                    break;
+            }
+        }
+        catch (HttpRequestException)
+        {
+            _error = NoConnection;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task ResendAsync()
+    {
+        _busy = true;
+        try
+        {
+            await AuthApi.ResendConfirmationEmailAsync(new EmailRequest(_model.Email));
+            _error = null;
+            _canResend = false;
+            _info = $"Wysłaliśmy nowy link na {_model.Email}.";
+        }
+        catch (HttpRequestException)
+        {
+            _error = NoConnection;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void ShowExternalProblem(ApiProblem problem)
+    {
+        _info = null;
+        _canResend = false;
+        _error = problem switch
+        {
+            { IsNetworkError: true } => NoConnection,
+            { Status: 404 } => "Ten sposób logowania jest teraz niedostępny.",
+            _ => problem.Detail ?? "Logowanie nie powiodło się.",
+        };
+    }
+
+    private void Continue() => Navigation.NavigateTo(Auth.ReturnUrl.Sanitize(ReturnUrl));
+
+    private sealed class LoginModel
+    {
+        [Required(ErrorMessage = "Podaj e-mail.")]
+        [EmailAddress(ErrorMessage = "To nie wygląda na adres e-mail.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Podaj hasło.")]
+        public string Password { get; set; } = string.Empty;
+    }
+}

@@ -1,14 +1,30 @@
 @inherits LayoutComponentBase
+@inject AuthSession Session
+@inject NavigationManager Navigation
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />
     </div>
 
     <main>
-        <div class="top-row px-4"></div>
+        <div class="top-row px-4">
+            <AuthorizeView>
+                <span class="text-muted me-3">@context.User.Identity?.Name</span>
+                <button type="button" class="btn btn-link" @onclick="SignOutAsync">Wyloguj</button>
+            </AuthorizeView>
+        </div>
 
         <article class="content px-4">
             @Body
         </article>
     </main>
 </div>
+
+@code {
+    private async Task SignOutAsync()
+    {
+        await Session.SignOutAsync();
+        Navigation.NavigateTo("login");
+    }
+}
