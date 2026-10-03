@@ -15,7 +15,7 @@ internal sealed class BrowserExternalSignIn(IJSRuntime js, NavigationManager nav
     private readonly IConfigurationSection _settings = configuration.GetSection("ExternalLogin");
 
     public IReadOnlyList<string> Providers =>
-        new[] { "google", "microsoft", "facebook" }.Where(p => !string.IsNullOrEmpty(ClientId(p))).ToArray();
+		[.. new[] { "google", "microsoft", "facebook" }.Where(p => !string.IsNullOrEmpty(ClientId(p)))];
 
     public async Task<string?> GetTokenAsync(string provider, CancellationToken cancellationToken)
     {

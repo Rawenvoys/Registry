@@ -35,8 +35,8 @@ public sealed record ApiProblem(int Status, string? Title, string? Detail, IRead
                 foreach (var error in errorsElement.EnumerateObject())
                 {
                     errors[error.Name] = error.Value.ValueKind == JsonValueKind.Array
-                        ? error.Value.EnumerateArray().Select(e => e.GetString() ?? string.Empty).ToArray()
-                        : [error.Value.ToString()];
+                        ? [.. error.Value.EnumerateArray().Select(e => e.GetString() ?? string.Empty)]
+						: [error.Value.ToString()];
                 }
             }
 

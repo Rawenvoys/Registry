@@ -26,6 +26,8 @@ dotnet run --project src/Api
 dotnet run --project src/WebApp
 ```
 
+WebApp woła API pod `https://localhost:7276`, więc API musi działać równolegle. W Visual Studio wybierz profil uruchomienia **Api + WebApp** (plik `Registry.slnLaunch`). Przy pierwszym uruchomieniu zaufaj certyfikatowi deweloperskiemu: `dotnet dev-certs https --trust`.
+
 Wymaga .NET 10 SDK. Linki potwierdzające e-mail API na razie tylko loguje w konsoli.
 
 Logowanie przez Google, Microsoft i Facebook w WebApp włącza się, podając identyfikatory aplikacji w `src/WebApp/wwwroot/appsettings.json` (`ExternalLogin:*:ClientId`) oraz te same identyfikatory w API (`Authentication:External`). U dostawcy trzeba dodać adres powrotu `https://localhost:7037/signin-callback.html` i zezwolić na tokeny ID (implicit flow). Bez identyfikatora przycisk danego dostawcy się nie pokazuje.

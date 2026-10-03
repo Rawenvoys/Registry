@@ -18,10 +18,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     {
         base.OnModelCreating(builder);
 
-        builder.Entity<User>(user =>
-        {
-            user.Property(u => u.DisplayName).HasMaxLength(200);
-        });
+        builder.Entity<User>(user => user.Property(u => u.DisplayName).HasMaxLength(200));
 
         builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }

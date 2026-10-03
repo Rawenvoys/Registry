@@ -2,8 +2,8 @@ namespace Registry.Infrastructure.Identity.External;
 
 internal static class TokenClaims
 {
-    public static object? Get(IDictionary<string, object> claims, string name) =>
-        claims.TryGetValue(name, out var value) ? value : null;
+    public static object? Get(IDictionary<string, object> claims, string name) 
+        => claims.TryGetValue(name, out var value) ? value : null;
 
     public static string? GetString(IDictionary<string, object> claims, string name) => Get(claims, name) as string;
 
