@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
-using Registry.Client;
+using Registry.PresentationKit;
+using Registry.PresentationKit.Auth;
 
 namespace Registry.MobileApp;
 
@@ -16,7 +17,8 @@ public static class MauiProgram
 			});
 
 		builder.Services.AddMauiBlazorWebView();
-		builder.Services.AddRegistryClient(ApiBaseAddress);
+		builder.Services.AddSingleton<ISessionStorage, SecureStorageSessionStorage>();
+		builder.Services.AddPresentationKit(ApiBaseAddress);
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();

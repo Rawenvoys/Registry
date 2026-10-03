@@ -80,12 +80,26 @@ API (zaimplementowane):
 | `POST /groups/{id}/invitations` | Kod zaproszenia ważny 7 dni, opcjonalnie tylko dla podanego e-maila (Owner, Admin; zaprosić Ownera może tylko Owner) |
 | `POST /invitations/{code}/accept` | Dołącza zalogowanego użytkownika z rolą z zaproszenia; kod działa raz |
 
-## 3. Furtka na firmy z oddziałami
+## 3. Ekrany
+
+Wspólne dla web i mobile, w `src/PresentationKit`:
+
+| Ekran | Adres | Co robi |
+|---|---|---|
+| Logowanie | `/login` | E-mail i hasło albo przycisk dostawcy; przy niepotwierdzonym e-mailu pozwala wysłać link ponownie |
+| Rejestracja | `/register` | Zakłada konto i prosi o kliknięcie linku z wiadomości |
+| Kreator | `/setup` | Nowa grupa (Prywatna, Dom, Firma z pierwszą lokalizacją) albo dołączenie kodem; `/setup?code=…` od razu wypełnia kod |
+| Start | `/` | Lista grup; gdy jest pusta, przekierowuje do kreatora |
+
+Sesja (token dostępu i odświeżania) jest zapisywana w `localStorage` na webie i w `SecureStorage` na telefonie, a token dostępu odświeża się sam na minutę przed wygaśnięciem.
+Logowanie u dostawcy na webie otwiera okienko (OAuth implicit flow), które wraca na `signin-callback.html`. W aplikacji mobilnej przyciski dostawców pojawią się, gdy dodamy logowanie przez `WebAuthenticator`.
+
+## 4. Furtka na firmy z oddziałami
 
 - Stany ilościowe wpisów zawsze wiszą na `Location`, nie na `Group`. Dom ma jedną lokalizację, sieć sklepów ma ich kilka, model ten sam.
 - Ograniczenie pracownika do wybranych lokalizacji dodamy później jako `LocationAccess(UserId, LocationId, Role)`, bez zmian w istniejących tabelach.
 
-## 4. Decyzje techniczne
+## 5. Decyzje techniczne
 
 - .NET 10, ASP.NET Core minimal API, EF Core, SQLite.
 - Na Kubernetesie: jedna replika API z plikiem bazy na wolumenie trwałym (SQLite nie obsługuje zapisu z wielu podów). Migracje uruchamiają się przy starcie API.

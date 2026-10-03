@@ -1,7 +1,71 @@
 @page "/"
+@attribute [Authorize]
+@inject IGroupsApi GroupsApi
+@inject NavigationManager Navigation
 
 <PageTitle>Registry</PageTitle>
 
-<h1>Registry</h1>
+<h1>Twoje grupy</h1>
 
-<p>Twoje katalogi pojawią się tutaj.</p>
+@if (_error is not null)
+{
+    <ErrorAlert Message="@_error" />
+}
+else if (_groups is null)
+{
+    <p class="text-muted">Ładowanie…</p>
+}
+else
+{
+    <ul class="list-group mb-3">
+        @foreach (var group in _groups)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>@group.Name</span>
+                <span class="text-muted small">@KindName(group.Kind) · @RoleName(group.MyRole)</span>
+            </li>
+        }
+    </ul>
+
+    <a href="setup" class="btn btn-outline-primary btn-sm">Utwórz albo dołącz do kolejnej</a>
+
+    <p class="text-muted mt-4">Twoje katalogi pojawią się tutaj.</p>
+}
+
+@code {
+    private IReadOnlyList<GroupSummary>? _groups;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _groups = await GroupsApi.ListAsync();
+        }
+        catch (Exception e) when (e is Refit.ApiExceptionBase or HttpRequestException)
+        {
+            _error = "Nie udało się wczytać grup. Odśwież stronę.";
+            return;
+        }
+
+        if (_groups.Count == 0)
+        {
+            // No default group: a new account starts in the setup wizard.
+            Navigation.NavigateTo("setup", replace: true);
+        }
+    }
+
+    private static string KindName(GroupKind kind) => kind switch
+    {
+        GroupKind.Personal => "Prywatna",
+        GroupKind.Household => "Dom",
+        _ => "Firma",
+    };
+
+    private static string RoleName(GroupRole role) => role switch
+    {
+        GroupRole.Owner => "Właściciel",
+        GroupRole.Admin => "Administrator",
+        _ => "Członek",
+    };
+}

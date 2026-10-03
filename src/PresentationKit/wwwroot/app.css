@@ -113,3 +113,75 @@ code {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+.auth-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: #f4f6f9;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 26rem;
+    background: #fff;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    padding: 2rem 1.5rem;
+}
+
+.wizard-card {
+    max-width: 34rem;
+}
+
+.auth-brand {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #1b6ec2;
+    margin-bottom: 1rem;
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #6c757d;
+    margin: 1.25rem 0;
+}
+
+    .auth-divider::before, .auth-divider::after {
+        content: "";
+        flex: 1;
+        border-top: 1px solid #dee2e6;
+    }
+
+.choice-card {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    background: #fff;
+    cursor: pointer;
+}
+
+    .choice-card:hover {
+        border-color: #1b6ec2;
+    }
+
+    .choice-card.selected {
+        border-color: #1b6ec2;
+        box-shadow: 0 0 0 0.15rem rgba(27, 110, 194, 0.25);
+    }
+
+    .choice-card .choice-title {
+        font-weight: 600;
+    }
+
+    .choice-card .choice-hint {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }

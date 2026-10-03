@@ -1,0 +1,203 @@
+@page "/setup"
+@layout AuthLayout
+@attribute [Authorize]
+@inject IGroupsApi GroupsApi
+@inject NavigationManager Navigation
+
+<PageTitle>Pierwsze kroki · Registry</PageTitle>
+
+@switch (_step)
+{
+    case Step.Choose:
+        <h1 class="h4 mb-2">Witaj w Registry</h1>
+        <p class="text-muted mb-4">Wszystko, co zapiszesz, należy do grupy. Załóż własną albo dołącz do istniejącej.</p>
+
+        <button type="button" class="choice-card" @onclick="() => _step = Step.Create">
+            <div class="choice-title">Utwórz nową grupę</div>
+            <div class="choice-hint">Dla siebie, domu albo firmy.</div>
+        </button>
+        <button type="button" class="choice-card" @onclick="() => _step = Step.Join">
+            <div class="choice-title">Mam kod zaproszenia</div>
+            <div class="choice-hint">Ktoś zaprosił Cię do swojej grupy.</div>
+        </button>
+        break;
+
+    case Step.Create:
+        <h1 class="h4 mb-4">Nowa grupa</h1>
+
+        <EditForm Model="_group" OnValidSubmit="CreateAsync" FormName="create-group">
+            <DataAnnotationsValidator />
+
+            <fieldset class="mb-3">
+                <legend class="form-label fs-6">Rodzaj</legend>
+                @foreach (var kind in Kinds)
+                {
+                    <button type="button" class="choice-card @(_group.Kind == kind.Kind ? "selected" : null)"
+                            aria-pressed="@(_group.Kind == kind.Kind)" @onclick="() => _group.Kind = kind.Kind">
+                        <div class="choice-title">@kind.Title</div>
+                        <div class="choice-hint">@kind.Hint</div>
+                    </button>
+                }
+            </fieldset>
+
+            <div class="mb-3">
+                <label for="group-name" class="form-label">Nazwa grupy</label>
+                <InputText id="group-name" class="form-control" placeholder="@NamePlaceholder" @bind-Value="_group.Name" />
+                <ValidationMessage For="() => _group.Name" />
+            </div>
+
+            @if (_group.Kind == GroupKind.Business)
+            {
+                <h2 class="h6 mt-4">Pierwsza lokalizacja</h2>
+                <p class="form-text mt-0">Kolejne sklepy, magazyny czy oddziały dodasz później.</p>
+
+                <div class="mb-3">
+                    <label for="location-name" class="form-label">Nazwa</label>
+                    <InputText id="location-name" class="form-control" placeholder="np. Magazyn główny" @bind-Value="_group.LocationName" />
+                    <ValidationMessage For="() => _group.LocationName" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="location-address" class="form-label">Adres <span class="text-muted">(opcjonalnie)</span></label>
+                    <InputText id="location-address" class="form-control" @bind-Value="_group.LocationAddress" />
+                </div>
+            }
+
+            <ErrorAlert Message="@_error" />
+
+            <div class="d-flex gap-2 justify-content-between">
+                <button type="button" class="btn btn-link px-0" @onclick="Back">Wstecz</button>
+                <button type="submit" class="btn btn-primary" disabled="@_busy">@(_busy ? "Tworzenie…" : "Utwórz grupę")</button>
+            </div>
+        </EditForm>
+        break;
+
+    case Step.Join:
+        <h1 class="h4 mb-4">Dołącz do grupy</h1>
+
+        <EditForm Model="_join" OnValidSubmit="JoinAsync" FormName="join-group">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label for="code" class="form-label">Kod zaproszenia</label>
+                <InputText id="code" class="form-control font-monospace" autocomplete="off" @bind-Value="_join.Code" />
+                <ValidationMessage For="() => _join.Code" />
+            </div>
+
+            <ErrorAlert Message="@_error" />
+
+            <div class="d-flex gap-2 justify-content-between">
+                <button type="button" class="btn btn-link px-0" @onclick="Back">Wstecz</button>
+                <button type="submit" class="btn btn-primary" disabled="@_busy">@(_busy ? "Dołączanie…" : "Dołącz")</button>
+            </div>
+        </EditForm>
+        break;
+}
+
+@code {
+    private static readonly (GroupKind Kind, string Title, string Hint)[] Kinds =
+    [
+        (GroupKind.Personal, "Prywatna", "Tylko dla Ciebie."),
+        (GroupKind.Household, "Dom", "Wspólna dla domowników."),
+        (GroupKind.Business, "Firma", "Z jedną lub wieloma lokalizacjami i pracownikami."),
+    ];
+
+    private readonly GroupModel _group = new();
+    private readonly JoinModel _join = new();
+    private Step _step;
+    private bool _busy;
+    private string? _error;
+
+    private string NamePlaceholder => _group.Kind switch
+    {
+        GroupKind.Household => "np. Dom Kowalskich",
+        GroupKind.Business => "np. Hurtownia ABC",
+        _ => "np. Moje kolekcje",
+    };
+
+    /// <summary>A code from an invitation link, e.g. /setup?code=…</summary>
+    [SupplyParameterFromQuery] public string? Code { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrWhiteSpace(Code))
+        {
+            _join.Code = Code;
+            _step = Step.Join;
+        }
+    }
+
+    private void Back()
+    {
+        _error = null;
+        _step = Step.Choose;
+    }
+
+    private async Task CreateAsync()
+    {
+        if (_group.Kind == GroupKind.Business && string.IsNullOrWhiteSpace(_group.LocationName))
+        {
+            _error = "Podaj nazwę pierwszej lokalizacji.";
+            return;
+        }
+
+        var location = _group.Kind == GroupKind.Business
+            ? new LocationRequest(_group.LocationName!.Trim(), string.IsNullOrWhiteSpace(_group.LocationAddress) ? null : _group.LocationAddress.Trim())
+            : null;
+        await SubmitAsync(() => GroupsApi.CreateAsync(new CreateGroupRequest(_group.Name.Trim(), _group.Kind, location)));
+    }
+
+    private Task JoinAsync() => SubmitAsync(() => GroupsApi.AcceptInvitationAsync(_join.Code.Trim()), notFound: "Nie ma takiego kodu zaproszenia.");
+
+    private async Task SubmitAsync(Func<Task> call, string? notFound = null)
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            await call();
+            Navigation.NavigateTo("");
+        }
+        catch (Exception e) when (e is Refit.ApiExceptionBase or HttpRequestException)
+        {
+            var problem = ApiProblem.From(e as Refit.ApiExceptionBase);
+            _error = problem switch
+            {
+                { IsNetworkError: true } => "Brak połączenia z serwerem. Spróbuj ponownie.",
+                { Status: 404 } when notFound is not null => notFound,
+                _ => problem.Detail ?? problem.Errors.Values.SelectMany(v => v).FirstOrDefault() ?? "Coś poszło nie tak. Spróbuj ponownie.",
+            };
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private enum Step
+    {
+        Choose,
+        Create,
+        Join,
+    }
+
+    private sealed class GroupModel
+    {
+        public GroupKind Kind { get; set; } = GroupKind.Household;
+
+        [Required(ErrorMessage = "Podaj nazwę grupy.")]
+        [MaxLength(100, ErrorMessage = "Nazwa może mieć najwyżej 100 znaków.")]
+        public string Name { get; set; } = string.Empty;
+
+        [MaxLength(100, ErrorMessage = "Nazwa może mieć najwyżej 100 znaków.")]
+        public string? LocationName { get; set; }
+
+        public string? LocationAddress { get; set; }
+    }
+
+    private sealed class JoinModel
+    {
+        [Required(ErrorMessage = "Wpisz kod z zaproszenia.")]
+        public string Code { get; set; } = string.Empty;
+    }
+}

@@ -1,25 +1,17 @@
 namespace Registry.Client;
 
 /// <summary>
-/// Where the signed-in user's access token lives. Hosts can replace the in-memory default,
-/// e.g. MobileApp with SecureStorage.
+/// Where the typed clients get the signed-in user's access token from.
+/// Hosts replace the in-memory default with a store that also refreshes and persists the session.
 /// </summary>
 public interface IAccessTokenStore
 {
     ValueTask<string?> GetAccessTokenAsync(CancellationToken cancellationToken);
-
-    ValueTask SetAccessTokenAsync(string? accessToken, CancellationToken cancellationToken);
 }
 
 public sealed class InMemoryAccessTokenStore : IAccessTokenStore
 {
-    private string? _accessToken;
+    public string? AccessToken { get; set; }
 
-    public ValueTask<string?> GetAccessTokenAsync(CancellationToken cancellationToken) => ValueTask.FromResult(_accessToken);
-
-    public ValueTask SetAccessTokenAsync(string? accessToken, CancellationToken cancellationToken)
-    {
-        _accessToken = accessToken;
-        return ValueTask.CompletedTask;
-    }
+    public ValueTask<string?> GetAccessTokenAsync(CancellationToken cancellationToken) => ValueTask.FromResult(AccessToken);
 }

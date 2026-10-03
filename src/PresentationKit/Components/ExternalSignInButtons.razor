@@ -1,0 +1,78 @@
+@inject IExternalSignIn ExternalSignIn
+@inject IAuthApi AuthApi
+@inject AuthSession Session
+
+@if (ExternalSignIn.Providers.Count > 0)
+{
+    <div class="d-grid gap-2">
+        @foreach (var provider in ExternalSignIn.Providers)
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled="@(_pending is not null)" @onclick="() => SignInAsync(provider)">
+                @(_pending == provider ? "Czekam na okno logowania…" : $"Kontynuuj z {DisplayName(provider)}")
+            </button>
+        }
+        @if (_pending is not null)
+        {
+            <button type="button" class="btn btn-link btn-sm" @onclick="Cancel">Anuluj</button>
+        }
+    </div>
+    <div class="auth-divider"><span>lub</span></div>
+}
+
+@code {
+    private string? _pending;
+    private CancellationTokenSource? _cancellation;
+
+    /// <summary>Called with the API's answer when the provider sign-in did not end in a session.</summary>
+    [Parameter] public EventCallback<ApiProblem> OnFailed { get; set; }
+
+    [Parameter] public EventCallback OnSignedIn { get; set; }
+
+    public static string DisplayName(string provider) => provider switch
+    {
+        "google" => "Google",
+        "microsoft" => "Microsoft",
+        "facebook" => "Facebook",
+        _ => provider,
+    };
+
+    private async Task SignInAsync(string provider)
+    {
+        _pending = provider;
+        _cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+        try
+        {
+            var token = await ExternalSignIn.GetTokenAsync(provider, _cancellation.Token);
+            if (token is null)
+            {
+                return;
+            }
+
+            var response = await AuthApi.ExternalLoginAsync(provider, new ExternalLoginRequest(token), _cancellation.Token);
+            if (response is { IsSuccessful: true, Content: { } tokens })
+            {
+                await Session.SignInAsync(tokens);
+                await OnSignedIn.InvokeAsync();
+            }
+            else
+            {
+                await OnFailed.InvokeAsync(ApiProblem.From(response.Error));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception e) when (e is HttpRequestException or JSException)
+        {
+            await OnFailed.InvokeAsync(new ApiProblem(0, "external_failed", $"Logowanie przez {DisplayName(provider)} nie powiodło się.", new Dictionary<string, string[]>()));
+        }
+        finally
+        {
+            _pending = null;
+            _cancellation?.Dispose();
+            _cancellation = null;
+        }
+    }
+
+    private void Cancel() => _cancellation?.Cancel();
+}
