@@ -45,15 +45,15 @@ W ustawieniach konta: lista powiązanych logowań, możliwość odłączenia (o 
 
 Brak domyślnej grupy. Po pierwszym logowaniu, jeśli użytkownik nie należy do żadnej grupy, widzi **kreator**:
 
-1. Utwórz grupę: nazwa + rodzaj (Prywatna, Dom, Firma).
-2. Dla firmy: pierwsza lokalizacja (nazwa, adres), można dodać kolejne od razu albo później.
+1. Utwórz grupę: sama nazwa. Rodzaju grupy nie ma (decyzja z 2026-10-03): dom i firma działają tak samo.
+2. Kolejne lokalizacje (sklepy, magazyny, oddziały) można dodać później.
 3. Albo: dołącz do istniejącej grupy kodem/linkiem z zaproszenia.
 
 Użytkownik może należeć do wielu grup i przełącza aktywną grupę w aplikacji.
 
 ```
 Group
-  Id, Name, Kind (Personal | Household | Business), CreatedAt
+  Id, Name, CreatedAt
 
 Membership
   GroupId, UserId, Role (Owner | Admin | Member), JoinedAt
@@ -67,16 +67,16 @@ Invitation
 ```
 
 Role: `Owner` (wszystko, w tym usunięcie grupy i przekazanie własności), `Admin` (członkowie, lokalizacje), `Member` (praca na danych modułu).
-Dla grup Prywatna i Dom tworzymy jedną domyślną lokalizację, ukrytą w UI.
+Każda grupa dostaje przy tworzeniu jedną domyślną lokalizację o nazwie grupy. UI pokazuje lokalizacje dopiero wtedy, gdy grupa ma więcej niż jedną.
 
 API (zaimplementowane):
 
 | Endpoint | Co robi |
 |---|---|
 | `GET /groups` | Grupy zalogowanego użytkownika z jego rolą; pusta lista oznacza, że klient pokazuje kreator |
-| `POST /groups` | Tworzy grupę; firma wymaga `firstLocation` |
+| `POST /groups` | Tworzy grupę z domyślną lokalizacją |
 | `GET /groups/{id}` | Członkowie i lokalizacje; 404 dla grup, do których użytkownik nie należy |
-| `POST /groups/{id}/locations` | Kolejna lokalizacja firmy (Owner, Admin) |
+| `POST /groups/{id}/locations` | Kolejna lokalizacja (Owner, Admin) |
 | `POST /groups/{id}/invitations` | Kod zaproszenia ważny 7 dni, opcjonalnie tylko dla podanego e-maila (Owner, Admin; zaprosić Ownera może tylko Owner) |
 | `POST /invitations/{code}/accept` | Dołącza zalogowanego użytkownika z rolą z zaproszenia; kod działa raz |
 
@@ -88,7 +88,7 @@ Wspólne dla web i mobile, w `src/PresentationKit`:
 |---|---|---|
 | Logowanie | `/login` | E-mail i hasło albo przycisk dostawcy; przy niepotwierdzonym e-mailu pozwala wysłać link ponownie |
 | Rejestracja | `/register` | Zakłada konto i prosi o kliknięcie linku z wiadomości |
-| Kreator | `/setup` | Nowa grupa (Prywatna, Dom, Firma z pierwszą lokalizacją) albo dołączenie kodem; `/setup?code=…` od razu wypełnia kod |
+| Kreator | `/setup` | Nowa grupa (sama nazwa) albo dołączenie kodem; `/setup?code=…` od razu wypełnia kod |
 | Start | `/` | Lista grup; gdy jest pusta, przekierowuje do kreatora |
 
 Sesja (token dostępu i odświeżania) jest zapisywana w `localStorage` na webie i w `SecureStorage` na telefonie, a token dostępu odświeża się sam na minutę przed wygaśnięciem.

@@ -2,9 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Registry.Application.Common;
 using Registry.Contracts.Groups;
 using Registry.Domain.Groups;
-using ContractKind = Registry.Contracts.Groups.GroupKind;
 using ContractRole = Registry.Contracts.Groups.GroupRole;
-using DomainKind = Registry.Domain.Groups.GroupKind;
 using DomainRole = Registry.Domain.Groups.GroupRole;
 
 namespace Registry.Application.Groups;
@@ -17,13 +15,7 @@ public sealed class GroupService(IRegistryDbContext db, IUserDirectory users, Ti
 {
     public async Task<GroupDetails> CreateAsync(Guid userId, CreateGroupRequest request, CancellationToken cancellationToken)
     {
-        var group = Group.Create(
-            request.Name,
-            Map(request.Kind),
-            userId,
-            request.FirstLocation?.Name,
-            request.FirstLocation?.Address,
-            clock.GetUtcNow());
+        var group = Group.Create(request.Name, userId, clock.GetUtcNow());
 
         db.Groups.Add(group);
         await db.SaveChangesAsync(cancellationToken);
@@ -40,7 +32,7 @@ public sealed class GroupService(IRegistryDbContext db, IUserDirectory users, Ti
 
         return groups
             .OrderBy(g => g.Name)
-            .Select(g => new GroupSummary(g.Id, g.Name, Map(g.Kind), Map(g.MembershipOf(userId)!.Role)))
+            .Select(g => new GroupSummary(g.Id, g.Name, Map(g.MembershipOf(userId)!.Role)))
             .ToList();
     }
 
@@ -88,7 +80,7 @@ public sealed class GroupService(IRegistryDbContext db, IUserDirectory users, Ti
         var group = (await LoadAsync(invitation.GroupId, cancellationToken))!;
         var membership = group.Accept(invitation, userId, userEmail, clock.GetUtcNow());
         await db.SaveChangesAsync(cancellationToken);
-        return new GroupSummary(group.Id, group.Name, Map(group.Kind), Map(membership.Role));
+        return new GroupSummary(group.Id, group.Name, Map(membership.Role));
     }
 
     private Task<Group?> LoadAsync(Guid groupId, CancellationToken cancellationToken) =>
@@ -116,15 +108,11 @@ public sealed class GroupService(IRegistryDbContext db, IUserDirectory users, Ti
             .Select(ToResponse)
             .ToList();
 
-        return new GroupDetails(group.Id, group.Name, Map(group.Kind), Map(group.MembershipOf(userId)!.Role), members, locations);
+        return new GroupDetails(group.Id, group.Name, Map(group.MembershipOf(userId)!.Role), members, locations);
     }
 
     private static LocationResponse ToResponse(Location location) =>
         new(location.Id, location.Name, location.Address, location.IsDefault);
-
-    private static DomainKind Map(ContractKind kind) => Enum.Parse<DomainKind>(kind.ToString());
-
-    private static ContractKind Map(DomainKind kind) => Enum.Parse<ContractKind>(kind.ToString());
 
     private static DomainRole Map(ContractRole role) => Enum.Parse<DomainRole>(role.ToString());
 

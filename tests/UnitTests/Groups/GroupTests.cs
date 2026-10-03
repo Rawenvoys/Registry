@@ -8,20 +8,18 @@ public class GroupTests
     private static readonly DateTimeOffset Now = new(2026, 10, 2, 12, 0, 0, TimeSpan.Zero);
     private static readonly Guid Owner = Guid.NewGuid();
 
-    private static Group Business() => Group.Create("Sklepy", GroupKind.Business, Owner, "Centrum", "ul. Długa 1", Now);
+    private static Group NewGroup() => Group.Create("Sklepy", Owner, Now);
 
     [Fact]
     public void Creator_becomes_owner()
     {
-        var group = Group.Create("Dom", GroupKind.Household, Owner, null, null, Now);
-
-        Assert.Equal(GroupRole.Owner, group.MembershipOf(Owner)!.Role);
+        Assert.Equal(GroupRole.Owner, NewGroup().MembershipOf(Owner)!.Role);
     }
 
     [Fact]
-    public void Household_gets_one_default_location_named_after_the_group()
+    public void Group_starts_with_one_default_location_named_after_it()
     {
-        var group = Group.Create("  Dom  ", GroupKind.Household, Owner, "ignored", null, Now);
+        var group = Group.Create("  Dom  ", Owner, Now);
 
         var location = Assert.Single(group.Locations);
         Assert.Equal("Dom", location.Name);
@@ -29,36 +27,29 @@ public class GroupTests
     }
 
     [Fact]
-    public void Business_requires_first_location()
+    public void Group_requires_a_name()
     {
-        var error = Assert.Throws<DomainException>(() => Group.Create("Sklepy", GroupKind.Business, Owner, " ", null, Now));
+        var error = Assert.Throws<DomainException>(() => Group.Create(" ", Owner, Now));
 
-        Assert.Equal("location_name_required", error.Code);
+        Assert.Equal("group_name_required", error.Code);
     }
 
     [Fact]
-    public void Business_starts_with_given_location()
+    public void Owner_adds_more_locations()
     {
-        var location = Assert.Single(Business().Locations);
+        var group = NewGroup();
 
-        Assert.Equal("Centrum", location.Name);
-        Assert.Equal("ul. Długa 1", location.Address);
-    }
+        group.AddLocation(Owner, "Rynek", "ul. Długa 1");
 
-    [Fact]
-    public void Only_business_can_add_locations()
-    {
-        var household = Group.Create("Dom", GroupKind.Household, Owner, null, null, Now);
-
-        var error = Assert.Throws<DomainException>(() => household.AddLocation(Owner, "Piwnica", null));
-
-        Assert.Equal("locations_business_only", error.Code);
+        Assert.Equal(["Sklepy", "Rynek"], group.Locations.Select(l => l.Name));
+        Assert.Equal("ul. Długa 1", group.Locations.Last().Address);
+        Assert.False(group.Locations.Last().IsDefault);
     }
 
     [Fact]
     public void Member_cannot_add_locations_or_invite()
     {
-        var group = Business();
+        var group = NewGroup();
         var member = Guid.NewGuid();
         group.Accept(group.Invite(Owner, null, GroupRole.Member, Now), member, null, Now);
 
@@ -69,7 +60,7 @@ public class GroupTests
     [Fact]
     public void Admin_cannot_invite_owner()
     {
-        var group = Business();
+        var group = NewGroup();
         var admin = Guid.NewGuid();
         group.Accept(group.Invite(Owner, null, GroupRole.Admin, Now), admin, null, Now);
 
@@ -80,7 +71,7 @@ public class GroupTests
     [Fact]
     public void Invitation_can_be_used_once()
     {
-        var group = Business();
+        var group = NewGroup();
         var invitation = group.Invite(Owner, null, GroupRole.Member, Now);
         group.Accept(invitation, Guid.NewGuid(), null, Now);
 
@@ -92,7 +83,7 @@ public class GroupTests
     [Fact]
     public void Expired_invitation_is_rejected()
     {
-        var group = Business();
+        var group = NewGroup();
         var invitation = group.Invite(Owner, null, GroupRole.Member, Now);
 
         var error = Assert.Throws<DomainException>(() => group.Accept(invitation, Guid.NewGuid(), null, Now + Invitation.Lifetime));
@@ -103,7 +94,7 @@ public class GroupTests
     [Fact]
     public void Invitation_for_an_email_only_works_for_that_email()
     {
-        var group = Business();
+        var group = NewGroup();
         var invitation = group.Invite(Owner, "ola@example.com", GroupRole.Member, Now);
 
         Assert.Equal("invitation_other_email",
@@ -116,7 +107,7 @@ public class GroupTests
     [Fact]
     public void Existing_member_cannot_join_again()
     {
-        var group = Business();
+        var group = NewGroup();
 
         var error = Assert.Throws<DomainException>(() => group.Accept(group.Invite(Owner, null, GroupRole.Member, Now), Owner, null, Now));
 

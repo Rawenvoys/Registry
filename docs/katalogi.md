@@ -20,7 +20,7 @@ Relacje typu Label, Artyści, EP to po prostu pola typu **odwołanie** między k
 
 ```
 Catalog
-  Id, GroupId, Name, Description?, TracksStock (bool), Visibility (Private | Public), CreatedAt
+  Id, GroupId, Name, Description?, TracksStock (bool), CreatedAt
 
 FieldDefinition
   Id, CatalogId, Key, Label, Type, IsRequired, Order, IsArchived
@@ -46,8 +46,8 @@ Każdy wpis ma zawsze `Name`, żeby listy, wyszukiwanie i odwołania działały 
 
 ## Widoczność
 
-Na start wszystkie katalogi są prywatne (`Visibility = Private`), widoczne tylko dla członków grupy.
-Docelowo katalog może być publiczny, wspólny dla wielu użytkowników jak na Discogs. Pole jest w modelu od początku, żeby później nie migrować danych; reguły publicznych katalogów (kto edytuje, moderacja, jak prywatna kolekcja odwołuje się do publicznego wpisu) zaprojektujemy, gdy do tego dojdziemy.
+Na start wszystkie katalogi są prywatne, widoczne tylko dla członków grupy.
+Docelowo katalog może być publiczny, wspólny dla wielu użytkowników jak na Discogs. Kolumnę `Visibility` dodamy wtedy migracją z domyślną wartością `Private` (decyzja z 2026-10-03); reguły publicznych katalogów (kto edytuje, moderacja, jak prywatna kolekcja odwołuje się do publicznego wpisu) zaprojektujemy, gdy do tego dojdziemy.
 
 ## Szablony
 

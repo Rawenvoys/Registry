@@ -2,7 +2,7 @@ namespace Registry.Domain.Groups;
 
 /// <summary>
 /// Where the group's stock physically is: a home, a shop, a warehouse.
-/// Personal and household groups get one default location that the UI does not show.
+/// Every group starts with one default location; clients show locations only once there is a second one.
 /// </summary>
 public class Location
 {

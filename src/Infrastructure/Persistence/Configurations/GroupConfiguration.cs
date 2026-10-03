@@ -11,7 +11,6 @@ internal sealed class GroupConfiguration : IEntityTypeConfiguration<Group>
         // Ids are created in the domain, so EF must insert children added to a loaded group instead of updating them.
         group.Property(g => g.Id).ValueGeneratedNever();
         group.Property(g => g.Name).HasMaxLength(Group.NameMaxLength);
-        group.Property(g => g.Kind).HasConversion<string>().HasMaxLength(20);
 
         group.HasMany(g => g.Memberships).WithOne().HasForeignKey(m => m.GroupId);
         group.HasMany(g => g.Locations).WithOne().HasForeignKey(l => l.GroupId);

@@ -14,7 +14,7 @@
 
         <button type="button" class="choice-card" @onclick="() => _step = Step.Create">
             <div class="choice-title">Utwórz nową grupę</div>
-            <div class="choice-hint">Dla siebie, domu albo firmy.</div>
+            <div class="choice-hint">Dla siebie, rodziny albo firmy.</div>
         </button>
         <button type="button" class="choice-card" @onclick="() => _step = Step.Join">
             <div class="choice-title">Mam kod zaproszenia</div>
@@ -28,40 +28,12 @@
         <EditForm Model="_group" OnValidSubmit="CreateAsync" FormName="create-group">
             <DataAnnotationsValidator />
 
-            <fieldset class="mb-3">
-                <legend class="form-label fs-6">Rodzaj</legend>
-                @foreach (var kind in Kinds)
-                {
-                    <button type="button" class="choice-card @(_group.Kind == kind.Kind ? "selected" : null)"
-                            aria-pressed="@(_group.Kind == kind.Kind)" @onclick="() => _group.Kind = kind.Kind">
-                        <div class="choice-title">@kind.Title</div>
-                        <div class="choice-hint">@kind.Hint</div>
-                    </button>
-                }
-            </fieldset>
-
             <div class="mb-3">
                 <label for="group-name" class="form-label">Nazwa grupy</label>
-                <InputText id="group-name" class="form-control" placeholder="@NamePlaceholder" @bind-Value="_group.Name" />
+                <InputText id="group-name" class="form-control" placeholder="np. Dom Kowalskich, Hurtownia ABC" @bind-Value="_group.Name" />
+                <div class="form-text">Możesz zaprosić do niej inne osoby i dodać lokalizacje, np. sklepy albo magazyny.</div>
                 <ValidationMessage For="() => _group.Name" />
             </div>
-
-            @if (_group.Kind == GroupKind.Business)
-            {
-                <h2 class="h6 mt-4">Pierwsza lokalizacja</h2>
-                <p class="form-text mt-0">Kolejne sklepy, magazyny czy oddziały dodasz później.</p>
-
-                <div class="mb-3">
-                    <label for="location-name" class="form-label">Nazwa</label>
-                    <InputText id="location-name" class="form-control" placeholder="np. Magazyn główny" @bind-Value="_group.LocationName" />
-                    <ValidationMessage For="() => _group.LocationName" />
-                </div>
-
-                <div class="mb-3">
-                    <label for="location-address" class="form-label">Adres <span class="text-muted">(opcjonalnie)</span></label>
-                    <InputText id="location-address" class="form-control" @bind-Value="_group.LocationAddress" />
-                </div>
-            }
 
             <ErrorAlert Message="@_error" />
 
@@ -95,25 +67,11 @@
 }
 
 @code {
-    private static readonly (GroupKind Kind, string Title, string Hint)[] Kinds =
-    [
-        (GroupKind.Personal, "Prywatna", "Tylko dla Ciebie."),
-        (GroupKind.Household, "Dom", "Wspólna dla domowników."),
-        (GroupKind.Business, "Firma", "Z jedną lub wieloma lokalizacjami i pracownikami."),
-    ];
-
     private readonly GroupModel _group = new();
     private readonly JoinModel _join = new();
     private Step _step;
     private bool _busy;
     private string? _error;
-
-    private string NamePlaceholder => _group.Kind switch
-    {
-        GroupKind.Household => "np. Dom Kowalskich",
-        GroupKind.Business => "np. Hurtownia ABC",
-        _ => "np. Moje kolekcje",
-    };
 
     /// <summary>A code from an invitation link, e.g. /setup?code=…</summary>
     [SupplyParameterFromQuery] public string? Code { get; set; }
@@ -133,19 +91,7 @@
         _step = Step.Choose;
     }
 
-    private async Task CreateAsync()
-    {
-        if (_group.Kind == GroupKind.Business && string.IsNullOrWhiteSpace(_group.LocationName))
-        {
-            _error = "Podaj nazwę pierwszej lokalizacji.";
-            return;
-        }
-
-        var location = _group.Kind == GroupKind.Business
-            ? new LocationRequest(_group.LocationName!.Trim(), string.IsNullOrWhiteSpace(_group.LocationAddress) ? null : _group.LocationAddress.Trim())
-            : null;
-        await SubmitAsync(() => GroupsApi.CreateAsync(new CreateGroupRequest(_group.Name.Trim(), _group.Kind, location)));
-    }
+    private Task CreateAsync() => SubmitAsync(() => GroupsApi.CreateAsync(new CreateGroupRequest(_group.Name.Trim())));
 
     private Task JoinAsync() => SubmitAsync(() => GroupsApi.AcceptInvitationAsync(_join.Code.Trim()), notFound: "Nie ma takiego kodu zaproszenia.");
 
@@ -183,16 +129,9 @@
 
     private sealed class GroupModel
     {
-        public GroupKind Kind { get; set; } = GroupKind.Household;
-
         [Required(ErrorMessage = "Podaj nazwę grupy.")]
         [MaxLength(100, ErrorMessage = "Nazwa może mieć najwyżej 100 znaków.")]
         public string Name { get; set; } = string.Empty;
-
-        [MaxLength(100, ErrorMessage = "Nazwa może mieć najwyżej 100 znaków.")]
-        public string? LocationName { get; set; }
-
-        public string? LocationAddress { get; set; }
     }
 
     private sealed class JoinModel
