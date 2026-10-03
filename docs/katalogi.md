@@ -1,6 +1,6 @@
 # Katalogi definiowane przez użytkownika
 
-Stan: propozycja, 2026-10-02.
+Stan: propozycja, 2026-10-02. Aktualny, okrojony zakres MVP (2026-10-03) opisuje [schemat-bazy.md](schemat-bazy.md).
 
 Aplikacja nie wie, czy ktoś prowadzi rejestr win, bydła czy utworów muzycznych. Użytkownik sam tworzy **katalogi**, nadaje im nazwę i definiuje pola. Kod zna tylko pojęcia: katalog, pole, wpis, stan.
 
