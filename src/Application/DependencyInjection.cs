@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Registry.Application.Catalogs;
 using Registry.Application.Groups;
 
 namespace Registry.Application;
@@ -9,6 +10,7 @@ public static class DependencyInjection
     {
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<GroupService>();
+        services.AddScoped<CatalogService>();
         return services;
     }
 }

@@ -1,0 +1,116 @@
+@page "/groups/{GroupId:guid}/catalogs/{CatalogId:guid}"
+@attribute [Authorize]
+@inject IGroupsApi GroupsApi
+@inject ICatalogsApi CatalogsApi
+@inject NavigationManager Navigation
+@inject NavigationState NavigationState
+
+<PageTitle>@(_catalog?.Name ?? "Katalog") · Registry</PageTitle>
+
+<p class="mb-2"><a href="@($"groups/{GroupId}")">← @(_groupName ?? "Grupa")</a></p>
+
+@if (_catalog is null)
+{
+    @if (_loadError is not null)
+    {
+        <ErrorAlert Message="@_loadError" />
+    }
+    else
+    {
+        <p class="text-muted">Ładowanie…</p>
+    }
+    return;
+}
+
+@if (_editing)
+{
+    <EditForm Model="_rename" OnValidSubmit="RenameAsync" FormName="rename-catalog" class="mb-1">
+        <DataAnnotationsValidator />
+        <div class="d-flex gap-2">
+            <InputText id="catalog-name" class="form-control form-control-lg" @bind-Value="_rename.Name" />
+            <button type="submit" class="btn btn-primary" disabled="@_busy">Zapisz</button>
+            <button type="button" class="btn btn-link" @onclick="() => _editing = false">Anuluj</button>
+        </div>
+        <ValidationMessage For="() => _rename.Name" />
+    </EditForm>
+}
+else
+{
+    <div class="d-flex align-items-center gap-3 flex-wrap mb-3">
+        <h1 class="mb-0">@_catalog.Name</h1>
+        @if (_canManage)
+        {
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="StartEditing">Zmień nazwę</button>
+            <ConfirmButton Text="Usuń katalog" Question="@($"Usunąć „{_catalog.Name}”?")" ConfirmText="Usuń" Disabled="_busy" OnConfirmed="DeleteAsync" />
+        }
+    </div>
+}
+
+<ErrorAlert Message="@_error" />
+
+<p class="text-muted">Wpisy tego katalogu pojawią się tutaj.</p>
+
+@code {
+    private CatalogResponse? _catalog;
+    private string? _groupName;
+    private bool _canManage;
+    private bool _editing;
+    private bool _busy;
+    private string? _error;
+    private string? _loadError;
+    private readonly NameModel _rename = new();
+
+    [Parameter] public Guid GroupId { get; set; }
+
+    [Parameter] public Guid CatalogId { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _catalog = null;
+        _editing = false;
+        _loadError = await ApiCall.RunAsync(async () =>
+        {
+            var group = await GroupsApi.GetAsync(GroupId);
+            _groupName = group.Name;
+            _canManage = group.MyRole is GroupRole.Owner or GroupRole.Admin;
+            _catalog = await CatalogsApi.GetAsync(GroupId, CatalogId);
+        }, notFound: "Nie ma takiego katalogu albo nie należysz do jego grupy.");
+    }
+
+    private void StartEditing()
+    {
+        _rename.Name = _catalog!.Name;
+        _error = null;
+        _editing = true;
+    }
+
+    private async Task RenameAsync()
+    {
+        _busy = true;
+        _error = await ApiCall.RunAsync(async () =>
+        {
+            _catalog = await CatalogsApi.RenameAsync(GroupId, CatalogId, new CatalogRequest(_rename.Name.Trim()));
+            _editing = false;
+            NavigationState.Refresh();
+        });
+        _busy = false;
+    }
+
+    private async Task DeleteAsync()
+    {
+        _busy = true;
+        _error = await ApiCall.RunAsync(async () =>
+        {
+            await CatalogsApi.DeleteAsync(GroupId, CatalogId);
+            Navigation.NavigateTo($"groups/{GroupId}");
+        });
+        _busy = false;
+    }
+
+    private sealed class NameModel
+    {
+        [Required(ErrorMessage = "Podaj nazwę.")]
+        [MaxLength(100, ErrorMessage = "Nazwa może mieć najwyżej 100 znaków.")]
+        public string Name { get; set; } = string.Empty;
+    }
+}

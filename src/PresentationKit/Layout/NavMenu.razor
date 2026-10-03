@@ -1,7 +1,14 @@
+@implements IDisposable
+@inject IGroupsApi GroupsApi
+@inject ICatalogsApi CatalogsApi
+@inject NavigationManager Navigation
+@inject NavigationState NavigationState
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">Registry</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+        <button title="Menu" class="navbar-toggler" @onclick="ToggleNavMenu">
             <span class="navbar-toggler-icon"></span>
         </button>
     </div>
@@ -14,16 +21,109 @@
                 <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Start
             </NavLink>
         </div>
+
+        @if (_groups is { Count: > 0 })
+        {
+            <div class="nav-section px-3">Grupy</div>
+            @foreach (var group in _groups)
+            {
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="@($"groups/{group.Id}")" Match="NavLinkMatch.All">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> @group.Name
+                    </NavLink>
+                </div>
+
+                @if (group.Id == _currentGroupId && _catalogs is not null)
+                {
+                    @foreach (var catalog in _catalogs)
+                    {
+                        <div class="nav-item nav-subitem px-3">
+                            <NavLink class="nav-link" href="@($"groups/{group.Id}/catalogs/{catalog.Id}")">@catalog.Name</NavLink>
+                        </div>
+                    }
+                }
+            }
+        }
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="setup">
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Nowa grupa lub kod
+            </NavLink>
+        </div>
     </nav>
 </div>
 
 @code {
     private bool collapseNavMenu = true;
+    private IReadOnlyList<GroupSummary>? _groups;
+    private IReadOnlyList<CatalogResponse>? _catalogs;
+    private Guid? _currentGroupId;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+        NavigationState.Changed += OnStateChanged;
+        AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        await LoadAsync(reloadGroups: true);
+    }
+
+    /// <summary>Reloads the groups, and the catalogs of the group in the address bar, which the menu shows nested.</summary>
+    private async Task LoadAsync(bool reloadGroups)
+    {
+        var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (state.User.Identity?.IsAuthenticated != true)
+        {
+            _groups = null;
+            _catalogs = null;
+            _currentGroupId = null;
+            return;
+        }
+
+        var groupId = CurrentGroupId();
+        await ApiCall.RunAsync(async () =>
+        {
+            if (reloadGroups || _groups is null)
+            {
+                _groups = await GroupsApi.ListAsync();
+            }
+
+            if (groupId != _currentGroupId || reloadGroups)
+            {
+                _catalogs = groupId is { } id && _groups.Any(g => g.Id == id) ? await CatalogsApi.ListAsync(id) : null;
+                _currentGroupId = groupId;
+            }
+        });
+    }
+
+    private Guid? CurrentGroupId()
+    {
+        var segments = Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Split('/');
+        return segments is ["groups", var id, ..] && Guid.TryParse(id, out var groupId) ? groupId : null;
+    }
+
+    // Creating, joining, leaving and deleting all end with a navigation, so a new page reloads the list.
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>
+        _ = InvokeAsync(async () =>
+        {
+            await LoadAsync(reloadGroups: true);
+            StateHasChanged();
+        });
+
+    private void OnStateChanged() => OnLocationChanged(null, null!);
+
+    private void OnAuthenticationStateChanged(Task<AuthenticationState> state) => OnLocationChanged(null, null!);
 
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+        NavigationState.Changed -= OnStateChanged;
+        AuthenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
     }
 }

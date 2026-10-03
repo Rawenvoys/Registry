@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Refit;
 using Registry.Client.Accounts;
+using Registry.Client.Catalogs;
 using Registry.Client.Groups;
 
 namespace Registry.Client;
@@ -25,6 +26,7 @@ public static class DependencyInjection
         services.AddRefitGeneratedClient<IAuthApi>(Settings).ConfigureHttpClient(c => c.BaseAddress = apiBaseAddress);
         services.AddRefitGeneratedClient<IAccountApi>(Settings).ConfigureHttpClient(c => c.BaseAddress = apiBaseAddress);
         services.AddRefitGeneratedClient<IGroupsApi>(Settings).ConfigureHttpClient(c => c.BaseAddress = apiBaseAddress);
+        services.AddRefitGeneratedClient<ICatalogsApi>(Settings).ConfigureHttpClient(c => c.BaseAddress = apiBaseAddress);
 
         return services;
     }

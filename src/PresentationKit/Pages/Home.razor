@@ -17,19 +17,17 @@ else if (_groups is null)
 }
 else
 {
-    <ul class="list-group mb-3">
+    <div class="list-group mb-3">
         @foreach (var group in _groups)
         {
-            <li class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="@($"groups/{group.Id}")" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                 <span>@group.Name</span>
-                <span class="text-muted small">@RoleName(group.MyRole)</span>
-            </li>
+                <span class="text-muted small">@Labels.Role(group.MyRole)</span>
+            </a>
         }
-    </ul>
+    </div>
 
     <a href="setup" class="btn btn-outline-primary btn-sm">Utwórz albo dołącz do kolejnej</a>
-
-    <p class="text-muted mt-4">Twoje katalogi pojawią się tutaj.</p>
 }
 
 @code {
@@ -54,11 +52,4 @@ else
             Navigation.NavigateTo("setup", replace: true);
         }
     }
-
-    private static string RoleName(GroupRole role) => role switch
-    {
-        GroupRole.Owner => "Właściciel",
-        GroupRole.Admin => "Administrator",
-        _ => "Członek",
-    };
 }
