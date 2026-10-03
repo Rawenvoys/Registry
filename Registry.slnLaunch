@@ -1,0 +1,17 @@
+[
+  {
+    "Name": "Api + WebApp",
+    "Projects": [
+      {
+        "Path": "src\\Api\\Api.csproj",
+        "Action": "Start",
+        "DebugTarget": "https"
+      },
+      {
+        "Path": "src\\WebApp\\WebApp.csproj",
+        "Action": "Start",
+        "DebugTarget": "https"
+      }
+    ]
+  }
+]
