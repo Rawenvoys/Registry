@@ -3,6 +3,7 @@
 @inject IGroupsApi GroupsApi
 @inject ICatalogsApi CatalogsApi
 @inject NavigationManager Navigation
+@inject NavigationState NavigationState
 
 <PageTitle>@(_group?.Name ?? "Grupa") · Registry</PageTitle>
 
@@ -305,6 +306,7 @@
         _group = await GroupsApi.UpdateAsync(GroupId, new UpdateGroupRequest(_rename.Name.Trim()));
         _rename.Name = _group.Name;
         _saved = true;
+        NavigationState.Refresh();
     });
 
     private Task LeaveAsync() => RunAsync(async () =>

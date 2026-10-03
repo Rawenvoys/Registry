@@ -3,6 +3,7 @@
 @inject IGroupsApi GroupsApi
 @inject ICatalogsApi CatalogsApi
 @inject NavigationManager Navigation
+@inject NavigationState NavigationState
 
 <PageTitle>@(_catalog?.Name ?? "Katalog") · Registry</PageTitle>
 
@@ -90,6 +91,7 @@ else
         {
             _catalog = await CatalogsApi.RenameAsync(GroupId, CatalogId, new CatalogRequest(_rename.Name.Trim()));
             _editing = false;
+            NavigationState.Refresh();
         });
         _busy = false;
     }
