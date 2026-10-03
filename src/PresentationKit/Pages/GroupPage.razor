@@ -1,0 +1,367 @@
+@page "/groups/{GroupId:guid}"
+@attribute [Authorize]
+@inject IGroupsApi GroupsApi
+@inject ICatalogsApi CatalogsApi
+@inject NavigationManager Navigation
+
+<PageTitle>@(_group?.Name ?? "Grupa") · Registry</PageTitle>
+
+<p class="mb-2"><a href="">← Twoje grupy</a></p>
+
+@if (_group is null)
+{
+    @if (_loadError is not null)
+    {
+        <ErrorAlert Message="@_loadError" />
+    }
+    else
+    {
+        <p class="text-muted">Ładowanie…</p>
+    }
+    return;
+}
+
+<h1 class="mb-1">@_group.Name</h1>
+<p class="text-muted small">Twoja rola: @Labels.Role(_group.MyRole)</p>
+
+<ul class="nav nav-tabs mb-3">
+    @foreach (var tab in Enum.GetValues<Tab>())
+    {
+        <li class="nav-item">
+            <button type="button" class="nav-link @(_tab == tab ? "active" : null)" @onclick="() => SwitchTab(tab)">@TabName(tab)</button>
+        </li>
+    }
+</ul>
+
+<ErrorAlert Message="@_error" />
+
+@switch (_tab)
+{
+    case Tab.Catalogs:
+        @if (_catalogs is null)
+        {
+            <p class="text-muted">Ładowanie…</p>
+        }
+        else
+        {
+            @if (_catalogs.Count == 0)
+            {
+                <p class="text-muted">
+                    Grupa nie ma jeszcze katalogów.
+                    @(CanManage ? "Dodaj pierwszy, np. Wina, Płyty albo Narzędzia." : "Właściciel albo administrator może je dodać.")
+                </p>
+            }
+            else
+            {
+                <div class="list-group mb-3">
+                    @foreach (var catalog in _catalogs)
+                    {
+                        <a href="@($"groups/{GroupId}/catalogs/{catalog.Id}")" class="list-group-item list-group-item-action">@catalog.Name</a>
+                    }
+                </div>
+            }
+
+            @if (CanManage)
+            {
+                <EditForm Model="_newCatalog" OnValidSubmit="CreateCatalogAsync" FormName="new-catalog">
+                    <DataAnnotationsValidator />
+                    <div class="d-flex gap-2">
+                        <InputText id="catalog-name" class="form-control" placeholder="Nazwa nowego katalogu" @bind-Value="_newCatalog.Name" />
+                        <button type="submit" class="btn btn-primary text-nowrap" disabled="@_busy">Dodaj katalog</button>
+                    </div>
+                    <ValidationMessage For="() => _newCatalog.Name" />
+                </EditForm>
+            }
+        }
+        break;
+
+    case Tab.Members:
+        <ul class="list-group mb-4">
+            @foreach (var member in _group.Members)
+            {
+                <li class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <div>@(member.DisplayName ?? member.Email)@(member.UserId == _userId ? " (Ty)" : null)</div>
+                            @if (member.DisplayName is not null)
+                            {
+                                <div class="text-muted small">@member.Email</div>
+                            }
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            @if (CanChangeRole(member))
+                            {
+                                <select class="form-select form-select-sm w-auto" aria-label="Rola"
+                                        value="@member.Role" disabled="@_busy"
+                                        @onchange="e => ChangeRoleAsync(member, Enum.Parse<GroupRole>((string)e.Value!))">
+                                    @foreach (var role in AssignableRoles)
+                                    {
+                                        <option value="@role">@Labels.Role(role)</option>
+                                    }
+                                </select>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">@Labels.Role(member.Role)</span>
+                            }
+                            @if (member.UserId != _userId && CanRemove(member))
+                            {
+                                <ConfirmButton Text="Usuń" Question="Usunąć z grupy?" ConfirmText="Usuń" Disabled="_busy"
+                                               OnConfirmed="() => RemoveAsync(member)" />
+                            }
+                        </div>
+                    </div>
+                </li>
+            }
+        </ul>
+
+        @if (CanManage)
+        {
+            <h2 class="h5">Zaproś</h2>
+            <p class="text-muted small">Kod działa 7 dni i tylko raz. Osoba wpisuje go w aplikacji albo otwiera link.</p>
+
+            <EditForm Model="_invite" OnValidSubmit="InviteAsync" FormName="invite" class="row g-2 align-items-end mb-3">
+                <div class="col-sm-4">
+                    <label for="invite-role" class="form-label small">Rola</label>
+                    <InputSelect id="invite-role" class="form-select" @bind-Value="_invite.Role">
+                        @foreach (var role in AssignableRoles)
+                        {
+                            <option value="@role">@Labels.Role(role)</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-sm-5">
+                    <label for="invite-email" class="form-label small">Tylko dla e-maila <span class="text-muted">(opcjonalnie)</span></label>
+                    <InputText id="invite-email" type="email" class="form-control" @bind-Value="_invite.Email" />
+                </div>
+                <div class="col-sm-3 d-grid">
+                    <button type="submit" class="btn btn-primary" disabled="@_busy">Utwórz kod</button>
+                </div>
+            </EditForm>
+
+            @if (_invitations is { Count: > 0 })
+            {
+                <h3 class="h6">Aktywne zaproszenia</h3>
+                <ul class="list-group">
+                    @foreach (var invitation in _invitations)
+                    {
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <code class="invitation-code">@invitation.Code</code>
+                                    <div class="text-muted small">
+                                        @Labels.Role(invitation.Role)@(invitation.Email is null ? null : $" · tylko {invitation.Email}") · ważny do @invitation.ExpiresAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                                    </div>
+                                    <input class="form-control form-control-sm mt-1" readonly value="@InviteLink(invitation)" aria-label="Link z zaproszeniem" onclick="this.select()" />
+                                </div>
+                                <ConfirmButton Text="Unieważnij" Question="Unieważnić kod?" ConfirmText="Unieważnij" Disabled="_busy"
+                                               OnConfirmed="() => RevokeAsync(invitation)" />
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        }
+        break;
+
+    case Tab.Settings:
+        @if (CanManage)
+        {
+            <h2 class="h5">Nazwa grupy</h2>
+            <EditForm Model="_rename" OnValidSubmit="RenameAsync" FormName="rename-group" class="mb-1">
+                <DataAnnotationsValidator />
+                <div class="d-flex gap-2">
+                    <InputText id="group-name" class="form-control" @bind-Value="_rename.Name" />
+                    <button type="submit" class="btn btn-primary" disabled="@_busy">Zapisz</button>
+                </div>
+                <ValidationMessage For="() => _rename.Name" />
+            </EditForm>
+            @if (_saved)
+            {
+                <p class="text-success small">Zapisano.</p>
+            }
+        }
+
+        <h2 class="h5 mt-4">Wyjście z grupy</h2>
+        <p class="text-muted small">Stracisz dostęp do katalogów tej grupy. Wrócisz tylko z nowym zaproszeniem.</p>
+        <ConfirmButton Text="Opuść grupę" Question="Opuścić grupę?" ConfirmText="Opuść" Disabled="_busy" OnConfirmed="LeaveAsync" />
+
+        @if (_group.MyRole == GroupRole.Owner)
+        {
+            <h2 class="h5 mt-4 text-danger">Usunięcie grupy</h2>
+            <p class="text-muted small">Usuwa grupę razem z katalogami, członkostwami i zaproszeniami. Tego nie da się cofnąć.</p>
+            <ConfirmButton Text="Usuń grupę" Question="@($"Usunąć „{_group.Name}” na zawsze?")" ConfirmText="Usuń grupę"
+                           CssClass="btn btn-outline-danger" Disabled="_busy" OnConfirmed="DeleteAsync" />
+        }
+        break;
+}
+
+@code {
+    private GroupDetails? _group;
+    private IReadOnlyList<CatalogResponse>? _catalogs;
+    private IReadOnlyList<InvitationResponse>? _invitations;
+    private readonly NameModel _newCatalog = new();
+    private readonly NameModel _rename = new();
+    private readonly InviteModel _invite = new();
+    private Tab _tab;
+    private Guid _userId;
+    private bool _busy;
+    private bool _saved;
+    private string? _error;
+    private string? _loadError;
+
+    [Parameter] public Guid GroupId { get; set; }
+
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private bool CanManage => _group?.MyRole is GroupRole.Owner or GroupRole.Admin;
+
+    private bool IsOwner => _group?.MyRole == GroupRole.Owner;
+
+    /// <summary>Roles the current user may hand out; only owners create owners.</summary>
+    private GroupRole[] AssignableRoles => IsOwner ? [GroupRole.Owner, GroupRole.Admin, GroupRole.Member] : [GroupRole.Admin, GroupRole.Member];
+
+    // Mirrors the rules in Group.ChangeRole and Group.RemoveMember; the API still enforces them.
+    private bool CanChangeRole(MemberResponse member) =>
+        member.UserId != _userId && (IsOwner || (CanManage && member.Role != GroupRole.Owner));
+
+    private bool CanRemove(MemberResponse member) =>
+        IsOwner || (CanManage && member.Role == GroupRole.Member);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var state = await AuthenticationState;
+        _userId = Guid.TryParse(state.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id) ? id : Guid.Empty;
+
+        _group = null;
+        _catalogs = null;
+        _invitations = null;
+        _loadError = await ApiCall.RunAsync(LoadGroupAsync, notFound: "Nie ma takiej grupy albo nie należysz do niej.");
+        if (_group is not null)
+        {
+            await LoadTabAsync();
+        }
+    }
+
+    private async Task LoadGroupAsync()
+    {
+        _group = await GroupsApi.GetAsync(GroupId);
+        _rename.Name = _group.Name;
+    }
+
+    private async Task SwitchTab(Tab tab)
+    {
+        _tab = tab;
+        _error = null;
+        _saved = false;
+        await LoadTabAsync();
+    }
+
+    private async Task LoadTabAsync()
+    {
+        _error = _tab switch
+        {
+            Tab.Catalogs => await ApiCall.RunAsync(async () => _catalogs = await CatalogsApi.ListAsync(GroupId)),
+            Tab.Members when CanManage => await ApiCall.RunAsync(async () => _invitations = await GroupsApi.ListInvitationsAsync(GroupId)),
+            _ => null,
+        };
+    }
+
+    private Task CreateCatalogAsync() => RunAsync(async () =>
+    {
+        var catalog = await CatalogsApi.CreateAsync(GroupId, new CatalogRequest(_newCatalog.Name.Trim()));
+        _newCatalog.Name = string.Empty;
+        Navigation.NavigateTo($"groups/{GroupId}/catalogs/{catalog.Id}");
+    });
+
+    private Task ChangeRoleAsync(MemberResponse member, GroupRole role) => RunAsync(async () =>
+    {
+        await GroupsApi.ChangeRoleAsync(GroupId, member.UserId, new ChangeRoleRequest(role));
+        await LoadGroupAsync();
+    }, reloadOnError: true);
+
+    private Task RemoveAsync(MemberResponse member) => RunAsync(async () =>
+    {
+        await GroupsApi.RemoveMemberAsync(GroupId, member.UserId);
+        await LoadGroupAsync();
+    });
+
+    private Task InviteAsync() => RunAsync(async () =>
+    {
+        var email = string.IsNullOrWhiteSpace(_invite.Email) ? null : _invite.Email.Trim();
+        await GroupsApi.InviteAsync(GroupId, new InvitationRequest(_invite.Role, email));
+        _invite.Email = null;
+        _invitations = await GroupsApi.ListInvitationsAsync(GroupId);
+    });
+
+    private Task RevokeAsync(InvitationResponse invitation) => RunAsync(async () =>
+    {
+        await GroupsApi.RevokeInvitationAsync(GroupId, invitation.Code);
+        _invitations = await GroupsApi.ListInvitationsAsync(GroupId);
+    });
+
+    private Task RenameAsync() => RunAsync(async () =>
+    {
+        _group = await GroupsApi.UpdateAsync(GroupId, new UpdateGroupRequest(_rename.Name.Trim()));
+        _rename.Name = _group.Name;
+        _saved = true;
+    });
+
+    private Task LeaveAsync() => RunAsync(async () =>
+    {
+        await GroupsApi.RemoveMemberAsync(GroupId, _userId);
+        Navigation.NavigateTo("");
+    });
+
+    private Task DeleteAsync() => RunAsync(async () =>
+    {
+        await GroupsApi.DeleteAsync(GroupId);
+        Navigation.NavigateTo("");
+    });
+
+    private async Task RunAsync(Func<Task> call, bool reloadOnError = false)
+    {
+        _busy = true;
+        _saved = false;
+        _error = await ApiCall.RunAsync(call);
+        if (_error is not null && reloadOnError)
+        {
+            // Put the role selector back to what the server has.
+            await ApiCall.RunAsync(LoadGroupAsync);
+        }
+
+        _busy = false;
+    }
+
+    private string InviteLink(InvitationResponse invitation) =>
+        Navigation.ToAbsoluteUri($"setup?code={invitation.Code}").ToString();
+
+    private static string TabName(Tab tab) => tab switch
+    {
+        Tab.Catalogs => "Katalogi",
+        Tab.Members => "Członkowie",
+        _ => "Ustawienia",
+    };
+
+    private enum Tab
+    {
+        Catalogs,
+        Members,
+        Settings,
+    }
+
+    private sealed class NameModel
+    {
+        [Required(ErrorMessage = "Podaj nazwę.")]
+        [MaxLength(100, ErrorMessage = "Nazwa może mieć najwyżej 100 znaków.")]
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private sealed class InviteModel
+    {
+        public GroupRole Role { get; set; } = GroupRole.Member;
+
+        [EmailAddress(ErrorMessage = "To nie wygląda na adres e-mail.")]
+        public string? Email { get; set; }
+    }
+}

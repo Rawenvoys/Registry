@@ -42,6 +42,85 @@ public sealed class GroupService(IRegistryDbContext db, IUserDirectory users, Ti
         return group?.MembershipOf(userId) is null ? null : await ToDetailsAsync(group, userId, cancellationToken);
     }
 
+    public async Task<GroupDetails?> UpdateAsync(Guid userId, Guid groupId, UpdateGroupRequest request, CancellationToken cancellationToken)
+    {
+        var group = await LoadAsync(groupId, cancellationToken);
+        if (group?.MembershipOf(userId) is null)
+        {
+            return null;
+        }
+
+        group.Rename(userId, request.Name);
+        await db.SaveChangesAsync(cancellationToken);
+        return await ToDetailsAsync(group, userId, cancellationToken);
+    }
+
+    /// <summary>Deletes the group with its memberships, locations, invitations and catalogs.</summary>
+    public async Task<bool> DeleteAsync(Guid userId, Guid groupId, CancellationToken cancellationToken)
+    {
+        var group = await LoadAsync(groupId, cancellationToken, withInvitations: true);
+        if (group?.MembershipOf(userId) is null)
+        {
+            return false;
+        }
+
+        group.EnsureCanDelete(userId);
+        db.Groups.Remove(group);
+        await db.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> ChangeRoleAsync(Guid userId, Guid groupId, Guid memberId, ChangeRoleRequest request, CancellationToken cancellationToken)
+    {
+        var group = await LoadAsync(groupId, cancellationToken);
+        if (group?.MembershipOf(userId) is null)
+        {
+            return false;
+        }
+
+        group.ChangeRole(userId, memberId, Map(request.Role));
+        await db.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    /// <summary>Removes a member; with <paramref name="memberId"/> equal to <paramref name="userId"/> the user leaves the group.</summary>
+    public async Task<bool> RemoveMemberAsync(Guid userId, Guid groupId, Guid memberId, CancellationToken cancellationToken)
+    {
+        var group = await LoadAsync(groupId, cancellationToken);
+        if (group?.MembershipOf(userId) is null)
+        {
+            return false;
+        }
+
+        group.RemoveMember(userId, memberId);
+        await db.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<IReadOnlyList<InvitationResponse>?> ListInvitationsAsync(Guid userId, Guid groupId, CancellationToken cancellationToken)
+    {
+        var group = await LoadAsync(groupId, cancellationToken, withInvitations: true);
+        if (group?.MembershipOf(userId) is null)
+        {
+            return null;
+        }
+
+        return group.PendingInvitations(userId, clock.GetUtcNow()).Select(ToResponse).ToList();
+    }
+
+    public async Task<bool> RevokeInvitationAsync(Guid userId, Guid groupId, string code, CancellationToken cancellationToken)
+    {
+        var group = await LoadAsync(groupId, cancellationToken, withInvitations: true);
+        if (group?.MembershipOf(userId) is null)
+        {
+            return false;
+        }
+
+        group.RevokeInvitation(userId, code);
+        await db.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     public async Task<LocationResponse?> AddLocationAsync(Guid userId, Guid groupId, LocationRequest request, CancellationToken cancellationToken)
     {
         var group = await LoadAsync(groupId, cancellationToken);
@@ -65,7 +144,7 @@ public sealed class GroupService(IRegistryDbContext db, IUserDirectory users, Ti
 
         var invitation = group.Invite(userId, request.Email, Map(request.Role), clock.GetUtcNow());
         await db.SaveChangesAsync(cancellationToken);
-        return new InvitationResponse(invitation.Code, Map(invitation.Role), invitation.Email, invitation.ExpiresAt);
+        return ToResponse(invitation);
     }
 
     /// <summary>Returns null when no invitation has this code.</summary>
@@ -83,11 +162,13 @@ public sealed class GroupService(IRegistryDbContext db, IUserDirectory users, Ti
         return new GroupSummary(group.Id, group.Name, Map(membership.Role));
     }
 
-    private Task<Group?> LoadAsync(Guid groupId, CancellationToken cancellationToken) =>
-        db.Groups
-            .Include(g => g.Memberships)
-            .Include(g => g.Locations)
-            .SingleOrDefaultAsync(g => g.Id == groupId, cancellationToken);
+    private Task<Group?> LoadAsync(Guid groupId, CancellationToken cancellationToken, bool withInvitations = false)
+    {
+        var groups = db.Groups.Include(g => g.Memberships).Include(g => g.Locations);
+        return withInvitations
+            ? groups.Include(g => g.Invitations).SingleOrDefaultAsync(g => g.Id == groupId, cancellationToken)
+            : groups.SingleOrDefaultAsync(g => g.Id == groupId, cancellationToken);
+    }
 
     private async Task<GroupDetails> ToDetailsAsync(Group group, Guid userId, CancellationToken cancellationToken)
     {
@@ -110,6 +191,9 @@ public sealed class GroupService(IRegistryDbContext db, IUserDirectory users, Ti
 
         return new GroupDetails(group.Id, group.Name, Map(group.MembershipOf(userId)!.Role), members, locations);
     }
+
+    private static InvitationResponse ToResponse(Invitation invitation) =>
+        new(invitation.Code, Map(invitation.Role), invitation.Email, invitation.ExpiresAt);
 
     private static LocationResponse ToResponse(Location location) =>
         new(location.Id, location.Name, location.Address, location.IsDefault);
