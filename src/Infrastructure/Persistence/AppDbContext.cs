@@ -1,13 +1,19 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Registry.Application.Common;
+using Registry.Domain.Groups;
 using Registry.Infrastructure.Identity;
 
 namespace Registry.Infrastructure.Persistence;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options)
-    : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options)
+    : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options), IRegistryDbContext
 {
+    public DbSet<Group> Groups => Set<Group>();
+
+    public DbSet<Invitation> Invitations => Set<Invitation>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -16,5 +22,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
         {
             user.Property(u => u.DisplayName).HasMaxLength(200);
         });
+
+        builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
 }

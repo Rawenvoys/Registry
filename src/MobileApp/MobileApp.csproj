@@ -71,7 +71,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\UI\UI.csproj" />
+      <ProjectReference Include="..\PresentationKit\PresentationKit.csproj" />
     </ItemGroup>
 
 </Project>

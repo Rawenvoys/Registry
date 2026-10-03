@@ -69,6 +69,17 @@ Invitation
 Role: `Owner` (wszystko, w tym usunięcie grupy i przekazanie własności), `Admin` (członkowie, lokalizacje), `Member` (praca na danych modułu).
 Dla grup Prywatna i Dom tworzymy jedną domyślną lokalizację, ukrytą w UI.
 
+API (zaimplementowane):
+
+| Endpoint | Co robi |
+|---|---|
+| `GET /groups` | Grupy zalogowanego użytkownika z jego rolą; pusta lista oznacza, że klient pokazuje kreator |
+| `POST /groups` | Tworzy grupę; firma wymaga `firstLocation` |
+| `GET /groups/{id}` | Członkowie i lokalizacje; 404 dla grup, do których użytkownik nie należy |
+| `POST /groups/{id}/locations` | Kolejna lokalizacja firmy (Owner, Admin) |
+| `POST /groups/{id}/invitations` | Kod zaproszenia ważny 7 dni, opcjonalnie tylko dla podanego e-maila (Owner, Admin; zaprosić Ownera może tylko Owner) |
+| `POST /invitations/{code}/accept` | Dołącza zalogowanego użytkownika z rolą z zaproszenia; kod działa raz |
+
 ## 3. Furtka na firmy z oddziałami
 
 - Stany ilościowe wpisów zawsze wiszą na `Location`, nie na `Group`. Dom ma jedną lokalizację, sieć sklepów ma ich kilka, model ten sam.
