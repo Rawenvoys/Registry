@@ -2,7 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:Registry.MobileApp"
-             xmlns:ui="clr-namespace:Registry.UI;assembly=Registry.UI"
+             xmlns:ui="clr-namespace:Registry.PresentationKit;assembly=Registry.PresentationKit"
              x:Class="Registry.MobileApp.MainPage">
 
     <BlazorWebView x:Name="blazorWebView" HostPage="wwwroot/index.html">
