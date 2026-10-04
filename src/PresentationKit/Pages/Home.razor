@@ -9,11 +9,11 @@
 
 @if (_error is not null)
 {
-    <ErrorAlert Message="@_error" />
+	<ErrorAlert Message="@_error" />
 }
 else if (_groups is null)
 {
-    <p class="text-muted">Ładowanie…</p>
+	<p class="text-muted">Ładowanie…</p>
 }
 else
 {
@@ -33,20 +33,20 @@ else
 }
 
 @code {
-    private IReadOnlyList<GroupSummary>? _groups;
-    private string? _error;
+	private IReadOnlyList<GroupSummary>? _groups;
+	private string? _error;
 
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            _groups = await GroupsApi.ListAsync();
-        }
-        catch (Exception e) when (e is Refit.ApiExceptionBase or HttpRequestException)
-        {
-            _error = "Nie udało się wczytać grup. Odśwież stronę.";
-            return;
-        }
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			_groups = await GroupsApi.ListAsync();
+		}
+		catch (Exception e) when (e is Refit.ApiExceptionBase or HttpRequestException)
+		{
+			_error = "Nie udało się wczytać grup. Odśwież stronę.";
+			return;
+		}
 
         if (_groups.Count == 0)
         {
