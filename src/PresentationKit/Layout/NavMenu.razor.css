@@ -81,3 +81,19 @@
         overflow-y: auto;
     }
 }
+
+.nav-section {
+    color: #9aa4b5;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding-top: 0.5rem;
+    padding-bottom: 0.25rem;
+}
+
+.nav-subitem ::deep a {
+    height: 2.25rem;
+    line-height: 2.25rem;
+    padding-left: 2.75rem;
+    font-size: 0.85rem;
+}
