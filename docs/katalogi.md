@@ -18,6 +18,8 @@ Relacje typu Label, Artyści, EP to po prostu pola typu **odwołanie** między k
 
 ## Model
 
+Nieaktualne: pierwotna propozycja. Obowiązuje [schemat-bazy.md](schemat-bazy.md) (wpis ma `Title`, bez JSON `Values` i bez `Stock`).
+
 ```
 Catalog
   Id, GroupId, Name, Description?, TracksStock (bool), CreatedAt
@@ -59,7 +61,7 @@ Docelowo katalog może być publiczny, wspólny dla wielu użytkowników jak na 
 | `PUT /groups/{id}/catalogs/{catalogId}` | Zmiana nazwy (Owner, Admin) |
 | `DELETE /groups/{id}/catalogs/{catalogId}` | Usunięcie (Owner, Admin) |
 
-Na razie katalog ma tylko nazwę (`Catalogs(Id, GroupId, Name, CreatedAt)` ze [schemat-bazy.md](schemat-bazy.md)); pola i wpisy dojdą w kolejnym kroku.
+Tabele wydawców i wpisów są już w bazie ([schemat-bazy.md](schemat-bazy.md)); API do nich dojdzie w kolejnym kroku.
 
 ## Szablony
 
@@ -67,5 +69,4 @@ Gotowe zestawy katalogów do wyboru w kreatorze grupy, np. "Piwniczka z winem" a
 
 ## Technicznie
 
-- SQLite: `Item.Values` jako kolumna JSON; filtrowanie i sortowanie po polach przez funkcje JSON SQLite w zapytaniach EF Core.
 - Formularze i listy w Blazor budowane dynamicznie z definicji pól (jeden komponent edytora na typ pola) w projekcie `UI`, więc web i mobile mają je za darmo.
