@@ -17,6 +17,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<Catalog> Catalogs => Set<Catalog>();
 
+    public DbSet<Publisher> Publishers => Set<Publisher>();
+
+    public DbSet<Item> Items => Set<Item>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

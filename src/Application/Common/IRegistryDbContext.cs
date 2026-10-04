@@ -12,5 +12,9 @@ public interface IRegistryDbContext
 
     DbSet<Catalog> Catalogs { get; }
 
+    DbSet<Publisher> Publishers { get; }
+
+    DbSet<Item> Items { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
