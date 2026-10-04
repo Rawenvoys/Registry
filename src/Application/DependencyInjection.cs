@@ -11,6 +11,7 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<GroupService>();
         services.AddScoped<CatalogService>();
+        services.AddScoped<ItemService>();
         return services;
     }
 }

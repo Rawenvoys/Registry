@@ -1,0 +1,72 @@
+@* Adding and editing a catalog item. The publisher is typed by name; the API adds names it does not know yet. *@
+
+<EditForm Model="_model" OnValidSubmit="SubmitAsync" FormName="item-form" class="card card-body mb-3">
+    <DataAnnotationsValidator />
+    <div class="mb-2">
+        <label for="item-title" class="form-label">Nazwa</label>
+        <InputText id="item-title" class="form-control" @bind-Value="_model.Title" />
+        <ValidationMessage For="() => _model.Title" />
+    </div>
+    <div class="row g-2 mb-3">
+        <div class="col-sm-4">
+            <label for="item-date" class="form-label">Data wydania</label>
+            <InputText id="item-date" class="form-control" placeholder="2020 lub 2020-05-17" @bind-Value="_model.ReleaseDate" />
+            <ValidationMessage For="() => _model.ReleaseDate" />
+        </div>
+        <div class="col-sm-8">
+            <label for="item-publisher" class="form-label">Wydawca</label>
+            <InputText id="item-publisher" class="form-control" list="item-publishers" @bind-Value="_model.PublisherName" />
+            <datalist id="item-publishers">
+                @foreach (var publisher in Publishers)
+                {
+                    <option value="@publisher.Name"></option>
+                }
+            </datalist>
+            <ValidationMessage For="() => _model.PublisherName" />
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary" disabled="@Busy">@(Item is null ? "Dodaj wpis" : "Zapisz")</button>
+        <button type="button" class="btn btn-link" @onclick="OnCancel">Anuluj</button>
+    </div>
+</EditForm>
+
+@code {
+    private readonly ItemModel _model = new();
+
+    /// <summary>The item being edited, or null when adding a new one.</summary>
+    [Parameter] public ItemResponse? Item { get; set; }
+
+    [Parameter] public IReadOnlyList<PublisherResponse> Publishers { get; set; } = [];
+
+    [Parameter] public bool Busy { get; set; }
+
+    [Parameter] public EventCallback<ItemRequest> OnSubmit { get; set; }
+
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    protected override void OnInitialized()
+    {
+        _model.Title = Item?.Title ?? string.Empty;
+        _model.ReleaseDate = Item?.ReleaseDate;
+        _model.PublisherName = Item?.PublisherName;
+    }
+
+    private Task SubmitAsync() => OnSubmit.InvokeAsync(new ItemRequest(
+        _model.Title.Trim(),
+        string.IsNullOrWhiteSpace(_model.ReleaseDate) ? null : _model.ReleaseDate.Trim(),
+        string.IsNullOrWhiteSpace(_model.PublisherName) ? null : _model.PublisherName.Trim()));
+
+    private sealed class ItemModel
+    {
+        [Required(ErrorMessage = "Podaj nazwę wpisu.")]
+        [MaxLength(300, ErrorMessage = "Nazwa może mieć najwyżej 300 znaków.")]
+        public string Title { get; set; } = string.Empty;
+
+        [RegularExpression(@"^\s*\d{4}(-\d{2}(-\d{2})?)?\s*$", ErrorMessage = "Wpisz rok, rok-miesiąc albo rok-miesiąc-dzień, np. 2020 albo 2020-05-17.")]
+        public string? ReleaseDate { get; set; }
+
+        [MaxLength(100, ErrorMessage = "Nazwa wydawcy może mieć najwyżej 100 znaków.")]
+        public string? PublisherName { get; set; }
+    }
+}

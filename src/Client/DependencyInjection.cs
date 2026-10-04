@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddRefitGeneratedClient<IAccountApi>(Settings).ConfigureHttpClient(c => c.BaseAddress = apiBaseAddress);
         services.AddRefitGeneratedClient<IGroupsApi>(Settings).ConfigureHttpClient(c => c.BaseAddress = apiBaseAddress);
         services.AddRefitGeneratedClient<ICatalogsApi>(Settings).ConfigureHttpClient(c => c.BaseAddress = apiBaseAddress);
+        services.AddRefitGeneratedClient<IItemsApi>(Settings).ConfigureHttpClient(c => c.BaseAddress = apiBaseAddress);
 
         return services;
     }
