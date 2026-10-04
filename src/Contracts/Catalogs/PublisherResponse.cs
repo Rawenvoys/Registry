@@ -1,3 +1,3 @@
 namespace Registry.Contracts.Catalogs;
 
-public sealed record PublisherResponse(Guid Id, Guid CatalogId, string Name);
+public sealed record PublisherResponse(Guid Id, Guid CatalogId, string Name, int ItemCount = 0);

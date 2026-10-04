@@ -92,26 +92,8 @@ public sealed class ItemService(IRegistryDbContext db, TimeProvider clock)
         return true;
     }
 
-    /// <summary>The catalog's publishers, for suggesting names while typing.</summary>
-    public async Task<IReadOnlyList<PublisherResponse>?> ListPublishersAsync(Guid userId, Guid groupId, Guid catalogId, CancellationToken cancellationToken)
-    {
-        if (!await CanAccessAsync(userId, groupId, catalogId, cancellationToken))
-        {
-            return null;
-        }
-
-        var publishers = await db.Publishers.Where(p => p.CatalogId == catalogId).AsNoTracking().ToListAsync(cancellationToken);
-        return publishers
-            .OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase)
-            .Select(p => new PublisherResponse(p.Id, p.CatalogId, p.Name))
-            .ToList();
-    }
-
     private Task<bool> CanAccessAsync(Guid userId, Guid groupId, Guid catalogId, CancellationToken cancellationToken) =>
-        db.Catalogs.AnyAsync(
-            c => c.Id == catalogId && c.GroupId == groupId
-                && db.Groups.Any(g => g.Id == groupId && g.Memberships.Any(m => m.UserId == userId)),
-            cancellationToken);
+        db.IsCatalogMemberAsync(userId, groupId, catalogId, cancellationToken);
 
     private static PartialDate? ParseDate(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : PartialDate.Parse(value);

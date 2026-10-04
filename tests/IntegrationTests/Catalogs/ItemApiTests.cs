@@ -106,4 +106,45 @@ public class ItemApiTests(RegistryApiFactory factory) : IClassFixture<RegistryAp
         var strangerGroup = await stranger.Groups.CreateAsync(new CreateGroupRequest("Obca"));
         Assert.Equal(HttpStatusCode.NotFound, await StatusOf(() => stranger.Items.ListAsync(strangerGroup.Id, wines.Id)));
     }
+
+    [Fact]
+    public async Task Publisher_is_added_renamed_and_deleted_leaving_its_items()
+    {
+        var (groups, catalogs, items) = await SignInAsync("publishers@example.com");
+        var group = await groups.CreateAsync(new CreateGroupRequest("Dom"));
+        var wines = await catalogs.CreateAsync(group.Id, new CatalogRequest("Wina"));
+
+        var masi = await items.CreatePublisherAsync(group.Id, wines.Id, new PublisherRequest("Masi"));
+        var item = await items.CreateAsync(group.Id, wines.Id, new ItemRequest("Amarone", PublisherName: "masi"));
+        await items.CreatePublisherAsync(group.Id, wines.Id, new PublisherRequest("Antinori"));
+
+        Assert.Equal(masi.Id, item.PublisherId);
+        Assert.Equal(HttpStatusCode.Conflict, await StatusOf(() => items.CreatePublisherAsync(group.Id, wines.Id, new PublisherRequest(" MASI "))));
+        Assert.Equal(HttpStatusCode.Conflict, await StatusOf(() => items.RenamePublisherAsync(group.Id, wines.Id, masi.Id, new PublisherRequest("antinori"))));
+
+        var renamed = await items.RenamePublisherAsync(group.Id, wines.Id, masi.Id, new PublisherRequest("Masi Agricola"));
+        Assert.Equal(1, renamed.ItemCount);
+        Assert.Equal("Masi Agricola", (await items.GetAsync(group.Id, wines.Id, item.Id)).PublisherName);
+        Assert.Equal([("Antinori", 0), ("Masi Agricola", 1)], (await items.ListPublishersAsync(group.Id, wines.Id)).Select(p => (p.Name, p.ItemCount)));
+
+        await items.DeletePublisherAsync(group.Id, wines.Id, masi.Id);
+
+        var orphan = await items.GetAsync(group.Id, wines.Id, item.Id);
+        Assert.Null(orphan.PublisherId);
+        Assert.Equal(["Antinori"], (await items.ListPublishersAsync(group.Id, wines.Id)).Select(p => p.Name));
+    }
+
+    [Fact]
+    public async Task Strangers_cannot_manage_publishers()
+    {
+        var owner = await SignInAsync("publishers-owner@example.com");
+        var stranger = await SignInAsync("publishers-stranger@example.com");
+        var group = await owner.Groups.CreateAsync(new CreateGroupRequest("Dom"));
+        var wines = await owner.Catalogs.CreateAsync(group.Id, new CatalogRequest("Wina"));
+        var masi = await owner.Items.CreatePublisherAsync(group.Id, wines.Id, new PublisherRequest("Masi"));
+
+        Assert.Equal(HttpStatusCode.NotFound, await StatusOf(() => stranger.Items.CreatePublisherAsync(group.Id, wines.Id, new PublisherRequest("X"))));
+        Assert.Equal(HttpStatusCode.NotFound, await StatusOf(() => stranger.Items.RenamePublisherAsync(group.Id, wines.Id, masi.Id, new PublisherRequest("X"))));
+        Assert.Equal(HttpStatusCode.NotFound, await StatusOf(() => stranger.Items.DeletePublisherAsync(group.Id, wines.Id, masi.Id)));
+    }
 }

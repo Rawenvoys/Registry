@@ -1,0 +1,159 @@
+@page "/groups/{GroupId:guid}/catalogs/{CatalogId:guid}/publishers"
+@attribute [Authorize]
+@inject ICatalogsApi CatalogsApi
+@inject IItemsApi ItemsApi
+
+<PageTitle>Wydawcy · @(_catalog?.Name ?? "Katalog") · Registry</PageTitle>
+
+<p class="mb-2"><a href="@($"groups/{GroupId}/catalogs/{CatalogId}")">← @(_catalog?.Name ?? "Katalog")</a></p>
+
+@if (_publishers is null)
+{
+    @if (_loadError is not null)
+    {
+        <ErrorAlert Message="@_loadError" />
+    }
+    else
+    {
+        <p class="text-muted">Ładowanie…</p>
+    }
+    return;
+}
+
+<h1 class="mb-3">Wydawcy</h1>
+
+<ErrorAlert Message="@_error" />
+
+<EditForm Model="_new" OnValidSubmit="CreateAsync" FormName="new-publisher" class="mb-3">
+    <DataAnnotationsValidator />
+    <div class="d-flex gap-2">
+        <InputText id="publisher-name" class="form-control" placeholder="Nazwa nowego wydawcy" @bind-Value="_new.Name" />
+        <button type="submit" class="btn btn-primary text-nowrap" disabled="@_busy">Dodaj wydawcę</button>
+    </div>
+    <ValidationMessage For="() => _new.Name" />
+</EditForm>
+
+@if (_publishers.Count == 0)
+{
+    <p class="text-muted">Katalog nie ma jeszcze wydawców. Dodaj ich tutaj albo wpisz nazwę w polu „Wydawca” przy wpisie.</p>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var publisher in _publishers)
+        {
+            @if (_renamingId == publisher.Id)
+            {
+                <div class="list-group-item">
+                    <EditForm Model="_rename" OnValidSubmit="RenameAsync" FormName="rename-publisher">
+                        <DataAnnotationsValidator />
+                        <div class="d-flex gap-2">
+                            <InputText id="publisher-rename" class="form-control" @bind-Value="_rename.Name" />
+                            <button type="submit" class="btn btn-primary" disabled="@_busy">Zapisz</button>
+                            <button type="button" class="btn btn-link" @onclick="() => _renamingId = null">Anuluj</button>
+                        </div>
+                        <ValidationMessage For="() => _rename.Name" />
+                    </EditForm>
+                </div>
+            }
+            else
+            {
+                <div class="list-group-item d-flex align-items-center gap-3 flex-wrap">
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">@publisher.Name</div>
+                        <div class="small text-muted">@ItemCountText(publisher.ItemCount)</div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@_busy" @onclick="() => StartRenaming(publisher)">Zmień nazwę</button>
+                    <ConfirmButton Text="Usuń"
+                                   Question="@(publisher.ItemCount > 0 ? $"Usunąć „{publisher.Name}”? Wpisy zostaną, bez wydawcy." : $"Usunąć „{publisher.Name}”?")"
+                                   ConfirmText="Usuń" Disabled="_busy" OnConfirmed="() => DeleteAsync(publisher)" />
+                </div>
+            }
+        }
+    </div>
+}
+
+@code {
+    private CatalogResponse? _catalog;
+    private List<PublisherResponse>? _publishers;
+    private Guid? _renamingId;
+    private bool _busy;
+    private string? _error;
+    private string? _loadError;
+    private readonly NameModel _new = new();
+    private readonly NameModel _rename = new();
+
+    [Parameter] public Guid GroupId { get; set; }
+
+    [Parameter] public Guid CatalogId { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _publishers = null;
+        _renamingId = null;
+        _loadError = await ApiCall.RunAsync(async () =>
+        {
+            _catalog = await CatalogsApi.GetAsync(GroupId, CatalogId);
+            _publishers = (await ItemsApi.ListPublishersAsync(GroupId, CatalogId)).ToList();
+        }, notFound: "Nie ma takiego katalogu albo nie należysz do jego grupy.");
+    }
+
+    private static string ItemCountText(int count) => count switch
+    {
+        0 => "brak wpisów",
+        1 => "1 wpis",
+        _ when count % 10 is >= 2 and <= 4 && count % 100 is < 12 or > 14 => $"{count} wpisy",
+        _ => $"{count} wpisów",
+    };
+
+    private void StartRenaming(PublisherResponse publisher)
+    {
+        _rename.Name = publisher.Name;
+        _error = null;
+        _renamingId = publisher.Id;
+    }
+
+    private async Task CreateAsync()
+    {
+        _busy = true;
+        _error = await ApiCall.RunAsync(async () =>
+        {
+            await ItemsApi.CreatePublisherAsync(GroupId, CatalogId, new PublisherRequest(_new.Name.Trim()));
+            _new.Name = string.Empty;
+            await ReloadAsync();
+        });
+        _busy = false;
+    }
+
+    private async Task RenameAsync()
+    {
+        _busy = true;
+        _error = await ApiCall.RunAsync(async () =>
+        {
+            await ItemsApi.RenamePublisherAsync(GroupId, CatalogId, _renamingId!.Value, new PublisherRequest(_rename.Name.Trim()));
+            _renamingId = null;
+            await ReloadAsync();
+        });
+        _busy = false;
+    }
+
+    private async Task DeleteAsync(PublisherResponse publisher)
+    {
+        _busy = true;
+        _error = await ApiCall.RunAsync(async () =>
+        {
+            await ItemsApi.DeletePublisherAsync(GroupId, CatalogId, publisher.Id);
+            _publishers!.Remove(publisher);
+        });
+        _busy = false;
+    }
+
+    private async Task ReloadAsync() => _publishers = (await ItemsApi.ListPublishersAsync(GroupId, CatalogId)).ToList();
+
+    private sealed class NameModel
+    {
+        [Required(ErrorMessage = "Podaj nazwę wydawcy.")]
+        [MaxLength(100, ErrorMessage = "Nazwa może mieć najwyżej 100 znaków.")]
+        public string Name { get; set; } = string.Empty;
+    }
+}

@@ -55,7 +55,10 @@ else
 }
 else if (_editingItem is null)
 {
-    <button type="button" class="btn btn-primary mb-3" @onclick="StartAdding">Dodaj wpis</button>
+    <div class="d-flex gap-2 mb-3">
+        <button type="button" class="btn btn-primary" @onclick="StartAdding">Dodaj wpis</button>
+        <a class="btn btn-outline-secondary" href="@($"groups/{GroupId}/catalogs/{CatalogId}/publishers")">Wydawcy</a>
+    </div>
 }
 
 @if (_items is null)

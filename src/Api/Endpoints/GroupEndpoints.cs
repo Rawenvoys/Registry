@@ -87,8 +87,19 @@ public static class GroupEndpoints
         items.MapDelete("/items/{itemId:guid}", async (Guid groupId, Guid catalogId, Guid itemId, ClaimsPrincipal user, ItemService service, CancellationToken ct) =>
             await service.DeleteAsync(user.Id(), groupId, catalogId, itemId, ct) ? Results.NoContent() : Results.NotFound());
 
-        items.MapGet("/publishers", async (Guid groupId, Guid catalogId, ClaimsPrincipal user, ItemService service, CancellationToken ct) =>
-            await service.ListPublishersAsync(user.Id(), groupId, catalogId, ct) is { } publishers ? Results.Ok(publishers) : Results.NotFound());
+        items.MapGet("/publishers", async (Guid groupId, Guid catalogId, ClaimsPrincipal user, PublisherService service, CancellationToken ct) =>
+            await service.ListAsync(user.Id(), groupId, catalogId, ct) is { } publishers ? Results.Ok(publishers) : Results.NotFound());
+
+        items.MapPost("/publishers", async (Guid groupId, Guid catalogId, PublisherRequest request, ClaimsPrincipal user, PublisherService service, CancellationToken ct) =>
+            await service.CreateAsync(user.Id(), groupId, catalogId, request, ct) is { } publisher
+                ? Results.Created($"/groups/{groupId}/catalogs/{catalogId}/publishers/{publisher.Id}", publisher)
+                : Results.NotFound());
+
+        items.MapPut("/publishers/{publisherId:guid}", async (Guid groupId, Guid catalogId, Guid publisherId, PublisherRequest request, ClaimsPrincipal user, PublisherService service, CancellationToken ct) =>
+            await service.RenameAsync(user.Id(), groupId, catalogId, publisherId, request, ct) is { } publisher ? Results.Ok(publisher) : Results.NotFound());
+
+        items.MapDelete("/publishers/{publisherId:guid}", async (Guid groupId, Guid catalogId, Guid publisherId, ClaimsPrincipal user, PublisherService service, CancellationToken ct) =>
+            await service.DeleteAsync(user.Id(), groupId, catalogId, publisherId, ct) ? Results.NoContent() : Results.NotFound());
 
         app.MapPost("/invitations/{code}/accept", async (string code, ClaimsPrincipal user, GroupService service, CancellationToken ct) =>
                 await service.AcceptInvitationAsync(user.Id(), user.FindFirstValue(ClaimTypes.Email), code, ct) is { } group
