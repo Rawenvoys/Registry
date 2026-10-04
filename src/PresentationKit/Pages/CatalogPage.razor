@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @inject IGroupsApi GroupsApi
 @inject ICatalogsApi CatalogsApi
+@inject IItemsApi ItemsApi
 @inject NavigationManager Navigation
 @inject NavigationState NavigationState
 
@@ -48,7 +49,54 @@ else
 
 <ErrorAlert Message="@_error" />
 
-<p class="text-muted">Wpisy tego katalogu pojawią się tutaj.</p>
+@if (_adding)
+{
+    <ItemForm Publishers="_publishers" Busy="_busy" OnSubmit="AddItemAsync" OnCancel="() => _adding = false" />
+}
+else if (_editingItem is null)
+{
+    <button type="button" class="btn btn-primary mb-3" @onclick="StartAdding">Dodaj wpis</button>
+}
+
+@if (_items is null)
+{
+    <p class="text-muted">Ładowanie…</p>
+}
+else if (_items.Count == 0)
+{
+    @if (!_adding)
+    {
+        <p class="text-muted">Katalog jest pusty. Dodaj pierwszy wpis.</p>
+    }
+}
+else
+{
+    <div class="list-group">
+        @foreach (var item in _items)
+        {
+            @if (_editingItem?.Id == item.Id)
+            {
+                <div class="list-group-item">
+                    <ItemForm @key="item.Id" Item="item" Publishers="_publishers" Busy="_busy" OnSubmit="UpdateItemAsync" OnCancel="() => _editingItem = null" />
+                </div>
+            }
+            else
+            {
+                <div class="list-group-item d-flex align-items-center gap-3 flex-wrap">
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">@item.Title</div>
+                        @if (Details(item) is { } details)
+                        {
+                            <div class="small text-muted">@details</div>
+                        }
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@_busy" @onclick="() => StartEditingItem(item)">Edytuj</button>
+                    <ConfirmButton Text="Usuń" Question="@($"Usunąć „{item.Title}”?")" ConfirmText="Usuń" Disabled="_busy" OnConfirmed="() => DeleteItemAsync(item)" />
+                </div>
+            }
+        }
+    </div>
+}
 
 @code {
     private CatalogResponse? _catalog;
@@ -59,6 +107,10 @@ else
     private string? _error;
     private string? _loadError;
     private readonly NameModel _rename = new();
+    private List<ItemResponse>? _items;
+    private IReadOnlyList<PublisherResponse> _publishers = [];
+    private bool _adding;
+    private ItemResponse? _editingItem;
 
     [Parameter] public Guid GroupId { get; set; }
 
@@ -67,13 +119,18 @@ else
     protected override async Task OnParametersSetAsync()
     {
         _catalog = null;
+        _items = null;
         _editing = false;
+        _adding = false;
+        _editingItem = null;
         _loadError = await ApiCall.RunAsync(async () =>
         {
             var group = await GroupsApi.GetAsync(GroupId);
             _groupName = group.Name;
             _canManage = group.MyRole is GroupRole.Owner or GroupRole.Admin;
             _catalog = await CatalogsApi.GetAsync(GroupId, CatalogId);
+            _items = (await ItemsApi.ListAsync(GroupId, CatalogId)).ToList();
+            _publishers = await ItemsApi.ListPublishersAsync(GroupId, CatalogId);
         }, notFound: "Nie ma takiego katalogu albo nie należysz do jego grupy.");
     }
 
@@ -105,6 +162,63 @@ else
             Navigation.NavigateTo($"groups/{GroupId}");
         });
         _busy = false;
+    }
+
+    private static string? Details(ItemResponse item) =>
+        string.Join(" · ", new[] { item.ReleaseDate, item.PublisherName }.Where(s => s is not null)) is { Length: > 0 } text ? text : null;
+
+    private void StartAdding()
+    {
+        _error = null;
+        _adding = true;
+    }
+
+    private void StartEditingItem(ItemResponse item)
+    {
+        _error = null;
+        _adding = false;
+        _editingItem = item;
+    }
+
+    private async Task AddItemAsync(ItemRequest request)
+    {
+        _busy = true;
+        _error = await ApiCall.RunAsync(async () =>
+        {
+            await ItemsApi.CreateAsync(GroupId, CatalogId, request);
+            _adding = false;
+            await ReloadItemsAsync();
+        });
+        _busy = false;
+    }
+
+    private async Task UpdateItemAsync(ItemRequest request)
+    {
+        _busy = true;
+        _error = await ApiCall.RunAsync(async () =>
+        {
+            await ItemsApi.UpdateAsync(GroupId, CatalogId, _editingItem!.Id, request);
+            _editingItem = null;
+            await ReloadItemsAsync();
+        });
+        _busy = false;
+    }
+
+    private async Task DeleteItemAsync(ItemResponse item)
+    {
+        _busy = true;
+        _error = await ApiCall.RunAsync(async () =>
+        {
+            await ItemsApi.DeleteAsync(GroupId, CatalogId, item.Id);
+            _items!.Remove(item);
+        });
+        _busy = false;
+    }
+
+    private async Task ReloadItemsAsync()
+    {
+        _items = (await ItemsApi.ListAsync(GroupId, CatalogId)).ToList();
+        _publishers = await ItemsApi.ListPublishersAsync(GroupId, CatalogId);
     }
 
     private sealed class NameModel
