@@ -66,7 +66,8 @@ Invitation
   Id, GroupId, Email?, Role, Code, ExpiresAt, AcceptedAt?
 ```
 
-Role: `Owner` (wszystko, w tym usunięcie grupy i przekazanie własności), `Admin` (członkowie, lokalizacje), `Member` (praca na danych modułu).
+Role: `Owner` (wszystko, w tym usunięcie grupy i przekazanie własności), `Admin` (członkowie, lokalizacje, katalogi), `Member` (praca na wpisach).
+Grupa zawsze ma co najmniej jednego Ownera: ostatni Owner nie może odejść ani zmienić sobie roli, dopóki nie nada jej komuś innemu.
 Każda grupa dostaje przy tworzeniu jedną domyślną lokalizację o nazwie grupy. UI pokazuje lokalizacje dopiero wtedy, gdy grupa ma więcej niż jedną.
 
 API (zaimplementowane):
@@ -76,8 +77,14 @@ API (zaimplementowane):
 | `GET /groups` | Grupy zalogowanego użytkownika z jego rolą; pusta lista oznacza, że klient pokazuje kreator |
 | `POST /groups` | Tworzy grupę z domyślną lokalizacją |
 | `GET /groups/{id}` | Członkowie i lokalizacje; 404 dla grup, do których użytkownik nie należy |
+| `PUT /groups/{id}` | Zmiana nazwy (Owner, Admin) |
+| `DELETE /groups/{id}` | Usuwa grupę z katalogami, członkostwami i zaproszeniami (Owner) |
+| `PUT /groups/{id}/members/{userId}` | Zmiana roli: Owner zmienia każdemu, Admin tylko między Member i Admin |
+| `DELETE /groups/{id}/members/{userId}` | Usunięcie członka (Owner każdego, Admin tylko Membera); własne id oznacza wyjście z grupy |
 | `POST /groups/{id}/locations` | Kolejna lokalizacja (Owner, Admin) |
+| `GET /groups/{id}/invitations` | Aktywne zaproszenia: nieużyte i niewygasłe (Owner, Admin) |
 | `POST /groups/{id}/invitations` | Kod zaproszenia ważny 7 dni, opcjonalnie tylko dla podanego e-maila (Owner, Admin; zaprosić Ownera może tylko Owner) |
+| `DELETE /groups/{id}/invitations/{code}` | Unieważnia kod (Owner, Admin) |
 | `POST /invitations/{code}/accept` | Dołącza zalogowanego użytkownika z rolą z zaproszenia; kod działa raz |
 
 ## 3. Ekrany
@@ -90,6 +97,8 @@ Wspólne dla web i mobile, w `src/PresentationKit`:
 | Rejestracja | `/register` | Zakłada konto i prosi o kliknięcie linku z wiadomości |
 | Kreator | `/setup` | Nowa grupa (sama nazwa) albo dołączenie kodem; `/setup?code=…` od razu wypełnia kod |
 | Start | `/` | Lista grup; gdy jest pusta, przekierowuje do kreatora |
+| Grupa | `/groups/{id}` | Zakładki: katalogi, członkowie z zaproszeniami, ustawienia (nazwa, wyjście, usunięcie) |
+| Katalog | `/groups/{id}/catalogs/{catalogId}` | Nazwa, zmiana nazwy i usunięcie; tu pojawią się wpisy |
 
 Sesja (token dostępu i odświeżania) jest zapisywana w `localStorage` na webie i w `SecureStorage` na telefonie, a token dostępu odświeża się sam na minutę przed wygaśnięciem.
 Logowanie u dostawcy na webie otwiera okienko (OAuth implicit flow), które wraca na `signin-callback.html`. W aplikacji mobilnej przyciski dostawców pojawią się, gdy dodamy logowanie przez `WebAuthenticator`.

@@ -16,7 +16,8 @@ internal sealed class DomainExceptionHandler(IProblemDetailsService problemDetai
         context.Response.StatusCode = domain.Code switch
         {
             "forbidden" => StatusCodes.Status403Forbidden,
-            "already_member" => StatusCodes.Status409Conflict,
+            "already_member" or "last_owner" or "name_taken" => StatusCodes.Status409Conflict,
+            "member_not_found" or "invitation_not_found" => StatusCodes.Status404NotFound,
             _ => StatusCodes.Status400BadRequest,
         };
 

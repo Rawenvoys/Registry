@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Registry.Application.Common;
+using Registry.Domain.Catalogs;
 using Registry.Domain.Groups;
 using Registry.Infrastructure.Identity;
 
@@ -13,6 +14,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Group> Groups => Set<Group>();
 
     public DbSet<Invitation> Invitations => Set<Invitation>();
+
+    public DbSet<Catalog> Catalogs => Set<Catalog>();
+
+    public DbSet<Publisher> Publishers => Set<Publisher>();
+
+    public DbSet<Item> Items => Set<Item>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

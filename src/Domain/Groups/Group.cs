@@ -44,6 +44,69 @@ public class Group
 
     public Membership? MembershipOf(Guid userId) => _memberships.FirstOrDefault(m => m.UserId == userId);
 
+    /// <summary>Whether <paramref name="userId"/> may change the group's setup: name, catalogs, locations.</summary>
+    public bool CanManage(Guid userId) => MembershipOf(userId) is { CanManage: true };
+
+    public void Rename(Guid actorId, string name)
+    {
+        RequireManager(actorId);
+        Name = RequireName(name, "group_name_required", "Podaj nazwę grupy.");
+    }
+
+    /// <summary>Only an owner may delete the group; the caller removes it with everything in it.</summary>
+    public void EnsureCanDelete(Guid actorId)
+    {
+        if (MembershipOf(actorId)?.Role != GroupRole.Owner)
+        {
+            throw new DomainException("forbidden", "Tylko właściciel może usunąć grupę.");
+        }
+    }
+
+    /// <summary>
+    /// Owners change anyone's role. Admins only move people between Member and Admin.
+    /// The group always keeps at least one owner.
+    /// </summary>
+    public void ChangeRole(Guid actorId, Guid userId, GroupRole role)
+    {
+        var actor = RequireManager(actorId);
+        var member = MembershipOf(userId) ?? throw new DomainException("member_not_found", "Ta osoba nie należy do grupy.");
+        if (actor.Role != GroupRole.Owner && (member.Role == GroupRole.Owner || role == GroupRole.Owner))
+        {
+            throw new DomainException("forbidden", "Tylko właściciel może nadawać i odbierać rolę właściciela.");
+        }
+
+        if (member.Role == GroupRole.Owner && role != GroupRole.Owner)
+        {
+            RequireAnotherOwner(userId);
+        }
+
+        member.ChangeRole(role);
+    }
+
+    /// <summary>
+    /// Removes <paramref name="userId"/> from the group. Anyone may leave; owners remove anyone,
+    /// admins remove members only. The last owner cannot go.
+    /// </summary>
+    public void RemoveMember(Guid actorId, Guid userId)
+    {
+        var member = MembershipOf(userId) ?? throw new DomainException("member_not_found", "Ta osoba nie należy do grupy.");
+        if (actorId != userId)
+        {
+            var actor = RequireManager(actorId);
+            if (actor.Role != GroupRole.Owner && member.Role != GroupRole.Member)
+            {
+                throw new DomainException("forbidden", "Administrator może usuwać tylko członków.");
+            }
+        }
+
+        if (member.Role == GroupRole.Owner)
+        {
+            RequireAnotherOwner(userId);
+        }
+
+        _memberships.Remove(member);
+    }
+
     public Location AddLocation(Guid actorId, string name, string? address)
     {
         RequireManager(actorId);
@@ -63,6 +126,21 @@ public class Group
         var invitation = new Invitation(Id, Trim(email), role, actorId, now);
         _invitations.Add(invitation);
         return invitation;
+    }
+
+    /// <summary>Invitations that can still be used, newest first.</summary>
+    public IEnumerable<Invitation> PendingInvitations(Guid actorId, DateTimeOffset now)
+    {
+        RequireManager(actorId);
+        return _invitations.Where(i => i.AcceptedAt is null && i.ExpiresAt > now).OrderByDescending(i => i.CreatedAt);
+    }
+
+    public void RevokeInvitation(Guid actorId, string code)
+    {
+        RequireManager(actorId);
+        var invitation = _invitations.FirstOrDefault(i => i.Code == code)
+            ?? throw new DomainException("invitation_not_found", "Nie ma takiego zaproszenia.");
+        _invitations.Remove(invitation);
     }
 
     public Membership Accept(Invitation invitation, Guid userId, string? userEmail, DateTimeOffset now)
@@ -104,7 +182,15 @@ public class Group
         return membership;
     }
 
-    private static string RequireName(string? value, string code, string message)
+    private void RequireAnotherOwner(Guid userId)
+    {
+        if (!_memberships.Any(m => m.Role == GroupRole.Owner && m.UserId != userId))
+        {
+            throw new DomainException("last_owner", "Grupa musi mieć co najmniej jednego właściciela. Najpierw nadaj tę rolę komuś innemu.");
+        }
+    }
+
+    internal static string RequireName(string? value, string code, string message)
     {
         var trimmed = Trim(value);
         if (trimmed is null)

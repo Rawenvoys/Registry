@@ -18,6 +18,8 @@ Relacje typu Label, Artyści, EP to po prostu pola typu **odwołanie** między k
 
 ## Model
 
+Nieaktualne: pierwotna propozycja. Obowiązuje [schemat-bazy.md](schemat-bazy.md) (wpis ma `Title`, bez JSON `Values` i bez `Stock`).
+
 ```
 Catalog
   Id, GroupId, Name, Description?, TracksStock (bool), CreatedAt
@@ -49,11 +51,22 @@ Każdy wpis ma zawsze `Name`, żeby listy, wyszukiwanie i odwołania działały 
 Na start wszystkie katalogi są prywatne, widoczne tylko dla członków grupy.
 Docelowo katalog może być publiczny, wspólny dla wielu użytkowników jak na Discogs. Kolumnę `Visibility` dodamy wtedy migracją z domyślną wartością `Private` (decyzja z 2026-10-03); reguły publicznych katalogów (kto edytuje, moderacja, jak prywatna kolekcja odwołuje się do publicznego wpisu) zaprojektujemy, gdy do tego dojdziemy.
 
+## API (zaimplementowane)
+
+| Endpoint | Co robi |
+|---|---|
+| `GET /groups/{id}/catalogs` | Katalogi grupy, alfabetycznie (każdy członek) |
+| `POST /groups/{id}/catalogs` | Nowy katalog (Owner, Admin); nazwa unikalna w grupie bez względu na wielkość liter |
+| `GET /groups/{id}/catalogs/{catalogId}` | Jeden katalog |
+| `PUT /groups/{id}/catalogs/{catalogId}` | Zmiana nazwy (Owner, Admin) |
+| `DELETE /groups/{id}/catalogs/{catalogId}` | Usunięcie (Owner, Admin) |
+
+Tabele wydawców i wpisów są już w bazie ([schemat-bazy.md](schemat-bazy.md)); API do nich dojdzie w kolejnym kroku.
+
 ## Szablony
 
 Gotowe zestawy katalogów do wyboru w kreatorze grupy, np. "Piwniczka z winem" albo "Kolekcja Hardstyle" (Labele, Artyści, Wydania). Szablon to dane (JSON), nie kod: przy wyborze kopiujemy definicje do grupy i od tej chwili użytkownik może je dowolnie zmieniać.
 
 ## Technicznie
 
-- SQLite: `Item.Values` jako kolumna JSON; filtrowanie i sortowanie po polach przez funkcje JSON SQLite w zapytaniach EF Core.
 - Formularze i listy w Blazor budowane dynamicznie z definicji pól (jeden komponent edytora na typ pola) w projekcie `UI`, więc web i mobile mają je za darmo.

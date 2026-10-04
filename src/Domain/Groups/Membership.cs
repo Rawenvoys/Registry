@@ -23,4 +23,6 @@ public class Membership
     public DateTimeOffset JoinedAt { get; private set; }
 
     public bool CanManage => Role is GroupRole.Owner or GroupRole.Admin;
+
+    internal void ChangeRole(GroupRole role) => Role = role;
 }

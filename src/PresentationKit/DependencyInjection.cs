@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Registry.Client;
 using Registry.PresentationKit.Auth;
+using Registry.PresentationKit.Components;
 
 namespace Registry.PresentationKit;
 
@@ -20,6 +21,7 @@ public static class DependencyInjection
         services.AddSingleton<AuthSession>();
         services.AddSingleton<IAccessTokenStore>(sp => sp.GetRequiredService<AuthSession>());
         services.AddScoped<AuthenticationStateProvider, SessionAuthenticationStateProvider>();
+        services.AddScoped<NavigationState>();
         services.AddAuthorizationCore();
         services.AddCascadingAuthenticationState();
 

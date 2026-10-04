@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Registry.Infrastructure.Persistence;
 
@@ -10,9 +11,11 @@ using Registry.Infrastructure.Persistence;
 namespace Registry.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261003065747_Catalogs")]
+    partial class Catalogs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
@@ -164,58 +167,6 @@ namespace Registry.Infrastructure.Persistence.Migrations
                     b.HasIndex("GroupId");
 
                     b.ToTable("Catalogs");
-                });
-
-            modelBuilder.Entity("Registry.Domain.Catalogs.Item", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("CatalogId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("PublisherId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ReleaseDate")
-                        .HasMaxLength(10)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CatalogId");
-
-                    b.HasIndex("PublisherId");
-
-                    b.ToTable("Items");
-                });
-
-            modelBuilder.Entity("Registry.Domain.Catalogs.Publisher", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("CatalogId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CatalogId");
-
-                    b.ToTable("Publishers");
                 });
 
             modelBuilder.Entity("Registry.Domain.Groups.Group", b =>
@@ -461,29 +412,6 @@ namespace Registry.Infrastructure.Persistence.Migrations
                     b.HasOne("Registry.Domain.Groups.Group", null)
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Registry.Domain.Catalogs.Item", b =>
-                {
-                    b.HasOne("Registry.Domain.Catalogs.Catalog", null)
-                        .WithMany()
-                        .HasForeignKey("CatalogId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Registry.Domain.Catalogs.Publisher", null)
-                        .WithMany()
-                        .HasForeignKey("PublisherId")
-                        .OnDelete(DeleteBehavior.SetNull);
-                });
-
-            modelBuilder.Entity("Registry.Domain.Catalogs.Publisher", b =>
-                {
-                    b.HasOne("Registry.Domain.Catalogs.Catalog", null)
-                        .WithMany()
-                        .HasForeignKey("CatalogId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
