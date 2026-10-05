@@ -74,9 +74,9 @@ else if (_items.Count == 0)
 }
 else
 {
-    <div class="list-group">
-        @foreach (var item in _items)
-        {
+    @foreach (var item in _items)
+    {
+        <div class="list-group mb-3">
             @if (_editingItem?.Id == item.Id)
             {
                 <div class="list-group-item">
@@ -97,8 +97,8 @@ else
                     <ConfirmButton Text="Usuń" Question="@($"Usunąć „{item.Title}”?")" ConfirmText="Usuń" Disabled="_busy" OnConfirmed="() => DeleteItemAsync(item)" />
                 </div>
             }
-        }
-    </div>
+        </div>
+    }
 }
 
 @code {

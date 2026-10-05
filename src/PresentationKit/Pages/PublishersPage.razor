@@ -39,9 +39,9 @@
 }
 else
 {
-    <div class="list-group">
-        @foreach (var publisher in _publishers)
-        {
+    @foreach (var publisher in _publishers)
+    {
+        <div class="list-group mb-3">
             @if (_renamingId == publisher.Id)
             {
                 <div class="list-group-item">
@@ -69,8 +69,8 @@ else
                                    ConfirmText="Usuń" Disabled="_busy" OnConfirmed="() => DeleteAsync(publisher)" />
                 </div>
             }
-        }
-    </div>
+        </div>
+    }
 }
 
 @code {
