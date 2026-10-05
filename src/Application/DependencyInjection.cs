@@ -12,6 +12,7 @@ public static class DependencyInjection
         services.AddScoped<GroupService>();
         services.AddScoped<CatalogService>();
         services.AddScoped<ItemService>();
+        services.AddScoped<PublisherService>();
         return services;
     }
 }

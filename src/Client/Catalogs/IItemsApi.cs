@@ -23,4 +23,13 @@ public interface IItemsApi
 
     [Get("/groups/{groupId}/catalogs/{catalogId}/publishers")]
     Task<IReadOnlyList<PublisherResponse>> ListPublishersAsync(Guid groupId, Guid catalogId, CancellationToken cancellationToken = default);
+
+    [Post("/groups/{groupId}/catalogs/{catalogId}/publishers")]
+    Task<PublisherResponse> CreatePublisherAsync(Guid groupId, Guid catalogId, [Body] PublisherRequest request, CancellationToken cancellationToken = default);
+
+    [Put("/groups/{groupId}/catalogs/{catalogId}/publishers/{publisherId}")]
+    Task<PublisherResponse> RenamePublisherAsync(Guid groupId, Guid catalogId, Guid publisherId, [Body] PublisherRequest request, CancellationToken cancellationToken = default);
+
+    [Delete("/groups/{groupId}/catalogs/{catalogId}/publishers/{publisherId}")]
+    Task DeletePublisherAsync(Guid groupId, Guid catalogId, Guid publisherId, CancellationToken cancellationToken = default);
 }

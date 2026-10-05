@@ -55,7 +55,10 @@ else
 }
 else if (_editingItem is null)
 {
-    <button type="button" class="btn btn-primary mb-3" @onclick="StartAdding">Dodaj wpis</button>
+    <div class="d-flex gap-2 mb-3">
+        <button type="button" class="btn btn-primary" @onclick="StartAdding">Dodaj wpis</button>
+        <a class="btn btn-outline-secondary" href="@($"groups/{GroupId}/catalogs/{CatalogId}/publishers")">Wydawcy</a>
+    </div>
 }
 
 @if (_items is null)
@@ -71,9 +74,9 @@ else if (_items.Count == 0)
 }
 else
 {
-    <div class="list-group">
-        @foreach (var item in _items)
-        {
+    @foreach (var item in _items)
+    {
+        <div class="list-group mb-3">
             @if (_editingItem?.Id == item.Id)
             {
                 <div class="list-group-item">
@@ -94,8 +97,8 @@ else
                     <ConfirmButton Text="Usuń" Question="@($"Usunąć „{item.Title}”?")" ConfirmText="Usuń" Disabled="_busy" OnConfirmed="() => DeleteItemAsync(item)" />
                 </div>
             }
-        }
-    </div>
+        </div>
+    }
 }
 
 @code {
